@@ -25,7 +25,7 @@
 byte initComplete = 0;
 byte serial_debug = 0;
 
-adns xy_sensor;
+adns sensor_1;
 
 // Button state polling/tracking
 const int buttonCount = 3;
@@ -53,7 +53,7 @@ void setup()
 
   SPI.begin();
   
-  xy_sensor.init(10);
+  sensor_1.init(10);
 
   for(int i=0; i<buttonCount; i++)
   {
@@ -76,26 +76,15 @@ void UpdatePointer(void)
 {
     if (initComplete)
     {
-      signed char xh, yh;
-      unsigned char xl, yl;
-      
-      xl = xy_sensor.read_reg(REG_Delta_X_L);
-      xh = xy_sensor.read_reg(REG_Delta_X_H);
-      yl = xy_sensor.read_reg(REG_Delta_Y_L);
-      yh = xy_sensor.read_reg(REG_Delta_Y_H);
-      
-      int x, y;
-      x = (((int)xh) << 8) | (unsigned int)xl;
-      y = (((int)yh) << 8) | (unsigned int)yl;
+      int x = sensor_1.read_x();
+      int y = sensor_1.read_y();
       
       if (serial_debug)
       {
           Serial.print("X: ");
-          Serial.print(xh,HEX);
-          Serial.print(xl,HEX);
+          Serial.print(x,HEX);
           Serial.print(", Y: ");
-          Serial.print(yh,HEX);
-          Serial.print(yl,HEX);
+          Serial.print(y,HEX);
           Serial.println(".");
       }
        
