@@ -11,9 +11,6 @@ extern "C"
 void adns::init_spi()
 {
   SPI.begin();
-  SPI.setDataMode(SPI_MODE3);
-  SPI.setBitOrder(MSBFIRST);
-  SPI.setClockDivider(8);
 }
 
 void adns::init (int chip_select)
@@ -60,12 +57,14 @@ void adns::init (int chip_select)
 
 void adns::com_begin()
 {
+  SPI.beginTransaction(SPISettings(2000000, MSBFIRST, SPI_MODE3));
   digitalWrite(this->ncs, LOW);
 }
 
 void adns::com_end()
 {
   digitalWrite(this->ncs, HIGH);
+  SPI.endTransaction();
 }
 
 byte adns::read_reg(byte reg_addr)
