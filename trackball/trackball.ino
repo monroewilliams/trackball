@@ -34,7 +34,7 @@ const int buttonPins[3] = {4, 5, 6};
 
 const int piezo_pin = 9;
 
-const int scroll_tick = 127;
+const int scroll_tick = 128;
 int scroll_accum = 0;
 
 void setup() 
@@ -48,9 +48,6 @@ void setup()
     delay(2000);
   }
     
-  // set up interrupt 0 (pin 3) to deal with the "motion" pin of the x/y sensor
-  attachInterrupt(0, UpdatePointer, FALLING);
-
   SPI.begin();
   
   sensor_1.init(10);
@@ -72,49 +69,34 @@ void click()
   digitalWrite(piezo_pin, LOW);
 }
 
-void UpdatePointer(void)
-{
-    if (initComplete)
-    {
-      int x = sensor_1.read_x();
-      int y = sensor_1.read_y();
-      
-      if (serial_debug)
-      {
-          Serial.print("X: ");
-          Serial.print(x,HEX);
-          Serial.print(", Y: ");
-          Serial.print(y,HEX);
-          Serial.println(".");
-      }
-       
-      if(1)
-      {
-        // regular x/y mouse
-        Mouse.move(x, y, 0);
-      }
-      else
-      {
-        // x scroll and y mouse
-        scroll_accum += x;
-        int scroll = scroll_accum / scroll_tick;
-        scroll_accum %= scroll_tick;
-        if(scroll != 0)
-        {
-          Serial.print("Scrolling by ");
-          Serial.println(scroll);
-          click();         
-        }
-        Mouse.move(0, y, scroll);        
-      }
-      
-    }
-}
 
 void loop() 
 {
-  // Mouse movement is completely interrupt-driven.
- 
+  // Poll sensors for mouse movement
+  {
+      int x = sensor_1.read_x();
+      int y = sensor_1.read_y();
+      int scroll = 0;
+      
+      if(0)
+      {
+        // testing: turn x into scroll
+        scroll_accum += x;
+        scroll = scroll_accum / scroll_tick;
+        scroll_accum %= scroll_tick;
+        x = 0;
+      }
+      
+      if ((x != 0) || (y != 0) || (scroll != 0))
+      {
+        if (scroll != 0)
+        {
+          click();
+        }
+        Mouse.move(x, y, scroll);        
+      }
+  }
+  
   // Poll for button states 
   for(int i=0; i<buttonCount; i++)
   {
