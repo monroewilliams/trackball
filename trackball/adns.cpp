@@ -165,4 +165,21 @@ void adns::dispRegisters(void)
   }
 }
   
+ 
+int adns::read_x()
+{
+  unsigned char l = this->read_reg(REG_Delta_X_L);
+  signed char h = this->read_reg(REG_Delta_X_H);
+  
+  return (((int)h) << 8) | (unsigned int)l;  
+}
+
+int adns::read_y()
+{  
+  unsigned char l = this->read_reg(REG_Delta_Y_L);
+  signed char h = this->read_reg(REG_Delta_Y_H);
+  
+  return (((int)h) << 8) | (unsigned int)l;  
+}
+
 
