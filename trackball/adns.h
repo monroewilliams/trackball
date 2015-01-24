@@ -52,9 +52,6 @@ public:
     // The arduino pin number this chip's chip select is tied to.
     int ncs;
         
-    // Set up the proper SPI parameters for talking to these chips
-    static void init_spi();
-    
     // Sets up the chip select for this instance and initializes the chip (upload firmware, etc).
     void init (int chip_select);
     void upload_firmware();

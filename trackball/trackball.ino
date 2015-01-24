@@ -51,7 +51,7 @@ void setup()
   // set up interrupt 0 (pin 3) to deal with the "motion" pin of the x/y sensor
   attachInterrupt(0, UpdatePointer, FALLING);
 
-  adns::init_spi();
+  SPI.begin();
   
   xy_sensor.init(10);
 

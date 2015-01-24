@@ -8,11 +8,6 @@ extern "C"
     extern byte serial_debug;
 }
 
-void adns::init_spi()
-{
-  SPI.begin();
-}
-
 void adns::init (int chip_select)
 {
   this->ncs = chip_select;
