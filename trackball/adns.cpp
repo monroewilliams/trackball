@@ -257,6 +257,45 @@ void adns::read_motion()
   this->x = bytes2int(xh, xl);  
   this->y = bytes2int(yh, yl);  
 }
+
+// This doesn't work properly.  I'm not sure why.
+void adns::read_motion_burst()
+{
+  byte burst[14];
+  
+  this->com_begin();
+  SPI.transfer(REG_Motion_Burst | 0x80 );
+  delayMicroseconds(mcs_tSRAD);
+  
+  for (int i = 0; i < 14; i++)
+  {
+      burst[i] = SPI.transfer(0x00);
+  }
+  
+  this->com_end();
+  delayMicroseconds(mcs_tBEXIT);
+  
+  // Clear residual motion by writing the Motion register
+  this->write_reg(REG_Motion, 0x00);
+  
+  // Extract x and y
+  this->x = bytes2int(burst[3], burst[2]);  
+  this->y = bytes2int(burst[5], burst[4]);  
+
+  if (serial_debug)
+  {
+    Serial.print("burst motion data:");
+    for (int i = 0; i < 14; i++)
+    {
+      Serial.print(burst[i], HEX);
+      Serial.print(" ");
+    }
+    Serial.print(", x = ");
+    Serial.print(this->x);
+    Serial.print(", y = ");
+    Serial.println(this->y);
+  }
+  
 }
 
 

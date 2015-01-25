@@ -15,6 +15,7 @@ public:
     void write_reg(byte reg_addr, byte data);
     
     void read_motion();
+    void read_motion_burst();
     
     int x;
     int y;
