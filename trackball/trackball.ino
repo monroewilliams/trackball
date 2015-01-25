@@ -74,8 +74,9 @@ void loop()
 {
   // Poll sensors for mouse movement
   {
-      int x = sensor_1.read_x();
-      int y = sensor_1.read_y();
+      sensor_1.read_motion();
+      int x = sensor_1.x;
+      int y = sensor_1.y;
       int scroll = 0;
       
       if(0)

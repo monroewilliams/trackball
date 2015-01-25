@@ -228,22 +228,31 @@ void adns::dispRegisters(void)
     delay(1);
   }
 }
-  
- 
-int adns::read_x()
-{
-  unsigned char l = this->read_reg(REG_Delta_X_L);
-  signed char h = this->read_reg(REG_Delta_X_H);
-  
-  return (((int)h) << 8) | (unsigned int)l;  
-}
 
-int adns::read_y()
-{  
-  unsigned char l = this->read_reg(REG_Delta_Y_L);
-  signed char h = this->read_reg(REG_Delta_Y_H);
+void adns::read_motion()
+{
+  unsigned char xl = 0, yl = 0;
+  signed char xh = 0, yh = 0;
+
+  // Reading the Motion register freezes the X/Y values until it's read again.
+  char mot = this->read_reg(REG_Motion);
   
-  return (((int)h) << 8) | (unsigned int)l;  
+  if (mot & 0x80)
+  {
+    // If this bit is set, there has been motion since the last 
+    xl = this->read_reg(REG_Delta_X_L);
+    xh = this->read_reg(REG_Delta_X_H);
+    yl = this->read_reg(REG_Delta_Y_L);
+    yh = this->read_reg(REG_Delta_Y_H);
+  
+  }
+  
+  // Unfreeze the X/Y registers
+  this->read_reg(REG_Motion);
+  
+  // Assemble the bytes into ints
+  this->x = (((int)xh) << 8) | (unsigned int)xl;  
+  this->y = (((int)yh) << 8) | (unsigned int)yl;  
 }
 
 

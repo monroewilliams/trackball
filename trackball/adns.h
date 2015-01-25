@@ -14,8 +14,10 @@ public:
     byte read_reg(byte reg_addr);
     void write_reg(byte reg_addr, byte data);
     
-    int read_x();
-    int read_y();
+    void read_motion();
+    
+    int x;
+    int y;
 
     void dispRegisters(void);
 };
