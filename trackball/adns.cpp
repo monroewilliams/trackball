@@ -8,6 +8,56 @@ extern "C"
     extern byte serial_debug;
 }
 
+// Registers
+enum
+{
+  REG_Product_ID                           = 0x00,
+  REG_Revision_ID                          = 0x01,
+  REG_Motion                               = 0x02,
+  REG_Delta_X_L                            = 0x03,
+  REG_Delta_X_H                            = 0x04,
+  REG_Delta_Y_L                            = 0x05,
+  REG_Delta_Y_H                            = 0x06,
+  REG_SQUAL                                = 0x07,
+  REG_Pixel_Sum                            = 0x08,
+  REG_Maximum_Pixel                        = 0x09,
+  REG_Minimum_Pixel                        = 0x0a,
+  REG_Shutter_Lower                        = 0x0b,
+  REG_Shutter_Upper                        = 0x0c,
+  REG_Frame_Period_Lower                   = 0x0d,
+  REG_Frame_Period_Upper                   = 0x0e,
+  REG_Configuration_I                      = 0x0f,
+  REG_Configuration_II                     = 0x10,
+  REG_Frame_Capture                        = 0x12,
+  REG_SROM_Enable                          = 0x13,
+  REG_Run_Downshift                        = 0x14,
+  REG_Rest1_Rate                           = 0x15,
+  REG_Rest1_Downshift                      = 0x16,
+  REG_Rest2_Rate                           = 0x17,
+  REG_Rest2_Downshift                      = 0x18,
+  REG_Rest3_Rate                           = 0x19,
+  REG_Frame_Period_Max_Bound_Lower         = 0x1a,
+  REG_Frame_Period_Max_Bound_Upper         = 0x1b,
+  REG_Frame_Period_Min_Bound_Lower         = 0x1c,
+  REG_Frame_Period_Min_Bound_Upper         = 0x1d,
+  REG_Shutter_Max_Bound_Lower              = 0x1e,
+  REG_Shutter_Max_Bound_Upper              = 0x1f,
+  REG_LASER_CTRL0                          = 0x20,
+  REG_Observation                          = 0x24,
+  REG_Data_Out_Lower                       = 0x25,
+  REG_Data_Out_Upper                       = 0x26,
+  REG_SROM_ID                              = 0x2a,
+  REG_Lift_Detection_Thr                   = 0x2e,
+  REG_Configuration_V                      = 0x2f,
+  REG_Configuration_IV                     = 0x39,
+  REG_Power_Up_Reset                       = 0x3a,
+  REG_Shutdown                             = 0x3b,
+  REG_Inverse_Product_ID                   = 0x3f,
+  REG_Motion_Burst                         = 0x50,
+  REG_SROM_Load_Burst                      = 0x62,
+  REG_Pixel_Burst                          = 0x64,
+};
+
 
 // Delay times from the datasheet, in microseconds
 enum
