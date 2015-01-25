@@ -6,16 +6,16 @@
 /*
   Pin assignments on Sparkfun Pro Micro:
   
-  3 - sensor 1 motion (MOT)
   4 - left button
   5 - middle button
   6 - right button
   9 - piezo speaker +
   
-  10 - sensor 1 chip select (SS)
   16 - SPI MOSI (MO)
   14 - SPI MISO (MI)
   15 - SPI SCLK (SC)
+  18 - sensor 1 chip select (SS)
+  18 - sensor 2 chip select (SS)
   
   VCC - sensor VI
   GND - sensor DG & AG
@@ -50,7 +50,7 @@ void setup()
     
   SPI.begin();
   
-  sensor_1.init(10);
+  sensor_1.init(18);
 
   for(int i=0; i<buttonCount; i++)
   {
