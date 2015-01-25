@@ -72,6 +72,11 @@ enum
     mcs_tBEXIT = 1,           // NCS inactive after motion burst (actually 500 nanoseconds)
 };
 
+static inline int bytes2int(byte h, byte l)
+{
+  return (((int)h) << 8) | (unsigned int)l;  
+}
+
 void adns::init (int chip_select)
 {
   this->ncs = chip_select;
@@ -231,28 +236,27 @@ void adns::dispRegisters(void)
 
 void adns::read_motion()
 {
-  unsigned char xl = 0, yl = 0;
-  signed char xh = 0, yh = 0;
+  byte xl = 0, yl = 0, xh = 0, yh = 0;
 
   // Reading the Motion register freezes the X/Y values until it's read again.
-  char mot = this->read_reg(REG_Motion);
+  byte mot = this->read_reg(REG_Motion);
   
   if (mot & 0x80)
   {
-    // If this bit is set, there has been motion since the last 
+    // If this bit is set, there has been motion since the last report
     xl = this->read_reg(REG_Delta_X_L);
     xh = this->read_reg(REG_Delta_X_H);
     yl = this->read_reg(REG_Delta_Y_L);
     yh = this->read_reg(REG_Delta_Y_H);
-  
   }
   
   // Unfreeze the X/Y registers
   this->read_reg(REG_Motion);
   
   // Assemble the bytes into ints
-  this->x = (((int)xh) << 8) | (unsigned int)xl;  
-  this->y = (((int)yh) << 8) | (unsigned int)yl;  
+  this->x = bytes2int(xh, xl);  
+  this->y = bytes2int(yh, yl);  
+}
 }
 
 
