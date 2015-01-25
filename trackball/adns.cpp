@@ -8,6 +8,20 @@ extern "C"
     extern byte serial_debug;
 }
 
+
+// Delay times from the datasheet, in microseconds
+enum
+{
+    mcs_tSWW = 120,          // SPI time between write commands
+    mcs_tSWR = 120,          // SPI time between write and read commands
+    mcs_tSRW = 20,           // SPI time between read and subsequent commands
+    mcs_tSRR = 20,           // SPI time between read and subsequent commands
+    mcs_tSRAD = 100,         // SPI read address-data delay
+    mcs_tSCLK_NCS_read = 1,  // SCLK to NCS inactive (for read operation) (actually 120 nanoseconds)
+    mcs_tSCLK_NCS_write = 20, // SCLK to NCS inactive (for read operation)
+    mcs_tBEXIT = 1,           // NCS inactive after motion burst (actually 500 nanoseconds)
+};
+
 void adns::init (int chip_select)
 {
   this->ncs = chip_select;
@@ -68,13 +82,13 @@ byte adns::read_reg(byte reg_addr)
   
   // send adress of the register, with MSBit = 0 to indicate it's a read
   SPI.transfer(reg_addr & 0x7f );
-  delayMicroseconds(100); // tSRAD
+  delayMicroseconds(mcs_tSRAD);
   // read data
   byte data = SPI.transfer(0);
   
-  delayMicroseconds(1); // tSCLK-NCS for read operation is 120ns
+  delayMicroseconds(mcs_tSCLK_NCS_read);
   this->com_end();
-  delayMicroseconds(19); //  tSRW/tSRR (=20us) minus tSCLK-NCS
+  delayMicroseconds(mcs_tSRW - mcs_tSCLK_NCS_read);
   
   if (0)
   {
@@ -96,9 +110,9 @@ void adns::write_reg(byte reg_addr, byte data)
   //sent data
   SPI.transfer(data);
   
-  delayMicroseconds(20); // tSCLK-NCS for write operation
+  delayMicroseconds(mcs_tSCLK_NCS_write); // tSCLK-NCS for write operation
   this->com_end();
-  delayMicroseconds(100); // tSWW/tSWR (=120us) minus tSCLK-NCS. Could be shortened, but is looks like a safe lower bound 
+  delayMicroseconds(mcs_tSWW - mcs_tSCLK_NCS_write); // Could be shortened, but is looks like a safe lower bound 
 }
 
 extern "C"
