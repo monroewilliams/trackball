@@ -35,7 +35,7 @@ const int buttonPins[3] = {4, 5, 6};
 
 const int piezo_pin = 9;
 
-const int scroll_tick = 1024;
+const int scroll_tick = 128;
 int scroll_accum = 0;
 
 void setup() 
@@ -53,6 +53,9 @@ void setup()
   
   sensor_1.init(18);
   sensor_2.init(19);
+  
+  sensor_1.set_cpi(2400);
+  sensor_2.set_cpi(2400);
 
   for(int i=0; i<buttonCount; i++)
   {
