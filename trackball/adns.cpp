@@ -298,4 +298,13 @@ void adns::read_motion_burst()
   
 }
 
-
+void adns::set_cpi(int cpi)
+{
+    cpi /= 200;
+    if (cpi < 1)
+      cpi = 1;
+    else if (cpi > 0x29)
+      cpi = 0x29;
+      
+    this->write_reg(REG_Configuration_I, cpi);
+}

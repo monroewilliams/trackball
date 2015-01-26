@@ -11,6 +11,8 @@ public:
     void read_motion();
     void read_motion_burst();
     
+    void set_cpi(int cpi);
+    
     int x;
     int y;
 
