@@ -213,16 +213,16 @@ void adns::dispRegisters(void)
 {
   int oreg[7] = 
   {
-    0x00,0x3F,0x2A,0x02  
+    0x00,0x3F,0x2A,0x02, REG_Configuration_I
   };
   char* oregname[] = 
   {
-    "Product_ID","Inverse_Product_ID","SROM_Version","Motion"  
+    "Product_ID","Inverse_Product_ID","SROM_Version","Motion", "Configuration_I"
   };
   byte regres;
 
   int rctr=0;
-  for(rctr=0; rctr<4; rctr++)
+  for(rctr=0; rctr<5; rctr++)
   {
     regres = this->read_reg(oreg[rctr]);
     Serial.println("---");
