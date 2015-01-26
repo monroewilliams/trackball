@@ -15,7 +15,7 @@
   14 - SPI MISO (MI)
   15 - SPI SCLK (SC)
   18 - sensor 1 chip select (SS)
-  18 - sensor 2 chip select (SS)
+  19 - sensor 2 chip select (SS)
   
   VCC - sensor VI
   GND - sensor DG & AG
@@ -26,6 +26,7 @@ byte initComplete = 0;
 byte serial_debug = 0;
 
 adns sensor_1;
+adns sensor_2;
 
 // Button state polling/tracking
 const int buttonCount = 3;
@@ -34,7 +35,7 @@ const int buttonPins[3] = {4, 5, 6};
 
 const int piezo_pin = 9;
 
-const int scroll_tick = 128;
+const int scroll_tick = 1024;
 int scroll_accum = 0;
 
 void setup() 
@@ -51,6 +52,7 @@ void setup()
   SPI.begin();
   
   sensor_1.init(18);
+  sensor_2.init(19);
 
   for(int i=0; i<buttonCount; i++)
   {
@@ -72,20 +74,44 @@ void click()
 
 void loop() 
 {
+  unsigned long loop_start = millis();
+  
   // Poll sensors for mouse movement
   {
       sensor_1.read_motion();
-      int x = sensor_1.x;
-      int y = sensor_1.y;
-      int scroll = 0;
+      sensor_2.read_motion();
       
-      if(0)
+      int x = 0, y = 0, scroll = 0;
+
+      x = -sensor_2.x;
+      y = sensor_1.x;
+      
+      // Figure out if we should scroll
+      if(1)
       {
-        // testing: turn x into scroll
-        scroll_accum += x;
-        scroll = scroll_accum / scroll_tick;
-        scroll_accum %= scroll_tick;
-        x = 0;
+        if ((abs(sensor_1.y) > abs(sensor_1.x)) && (abs(sensor_2.y) > abs(sensor_2.x)))
+        {
+          // Looks like we're scrolling more than not.  Take the average of the two sensors' y deltas as the scroll amount.
+          scroll_accum += -((sensor_1.y + sensor_2.y) / 2);
+          scroll = scroll_accum / scroll_tick;
+          scroll_accum %= scroll_tick;
+          
+          // When we're scrolling, disable x/y movement
+          x = 0;
+          y = 0;
+        }
+      }
+      
+      if (0)
+      {
+          Serial.print("1x = ");
+          Serial.print(sensor_1.x);
+          Serial.print(", 1y = ");
+          Serial.print(sensor_1.y);
+          Serial.print(", 2x = ");
+          Serial.print(sensor_2.x);
+          Serial.print(", 2y = ");
+          Serial.println(sensor_2.y);
       }
       
       if ((x != 0) || (y != 0) || (scroll != 0))
