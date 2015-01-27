@@ -92,7 +92,7 @@ void loop()
       // Figure out if we should scroll
       if(1)
       {
-        if ((abs(sensor_1.y) > abs(sensor_1.x)) && (abs(sensor_2.y) > abs(sensor_2.x)))
+        if ((abs(sensor_1.y) > (abs(sensor_1.x) * 2)) && (abs(sensor_2.y) > (abs(sensor_2.x) * 2)))
         {
           // Looks like we're scrolling more than not.  Take the average of the two sensors' y deltas as the scroll amount.
           scroll_accum += -((sensor_1.y + sensor_2.y) / 2);
