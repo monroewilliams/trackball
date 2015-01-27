@@ -9,7 +9,7 @@
   4 - left button
   5 - middle button
   6 - right button
-  9 - piezo speaker +
+  3 - piezo speaker +
   
   16 - SPI MOSI (MO)
   14 - SPI MISO (MI)
@@ -33,7 +33,7 @@ const int buttonCount = 3;
 const char buttonNames[3] = {MOUSE_LEFT, MOUSE_MIDDLE, MOUSE_RIGHT};
 const int buttonPins[3] = {4, 5, 6};
 
-const int piezo_pin = 9;
+const int piezo_pin = 3;
 
 const int scroll_tick = 128;
 int scroll_accum = 0;
