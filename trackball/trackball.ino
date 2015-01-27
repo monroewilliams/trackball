@@ -55,7 +55,9 @@ void setup()
   sensor_2.init(19);
   
   sensor_1.set_cpi(2400);
+  sensor_1.set_snap_angle(1);
   sensor_2.set_cpi(2400);
+  sensor_2.set_snap_angle(1);
 
   for(int i=0; i<buttonCount; i++)
   {

@@ -53,6 +53,7 @@ enum
   REG_Power_Up_Reset                       = 0x3a,
   REG_Shutdown                             = 0x3b,
   REG_Inverse_Product_ID                   = 0x3f,
+  REG_Snap_Angle                           = 0x42,
   REG_Motion_Burst                         = 0x50,
   REG_SROM_Load_Burst                      = 0x62,
   REG_Pixel_Burst                          = 0x64,
@@ -308,3 +309,9 @@ void adns::set_cpi(int cpi)
       
     this->write_reg(REG_Configuration_I, cpi);
 }
+
+void adns::set_snap_angle(byte enable)
+{
+    this->write_reg(REG_Snap_Angle, enable?0x80:0x00);
+}
+

@@ -12,6 +12,7 @@ public:
     void read_motion_burst();
     
     void set_cpi(int cpi);
+    void set_snap_angle(byte enable);
     
     int x;
     int y;
