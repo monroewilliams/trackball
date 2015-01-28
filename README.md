@@ -19,3 +19,14 @@ https://github.com/mrjohnk/ADNS-9800
 I've refactored the code substantially, set it up to be able to run two of the sensors (since I'm trying to emulate the "twist-to-scroll" behavior of the Kensington Slimblade, two sensors were necessary), and tweaked the sensitivity, etc. to my taste.
 
 This code may be used for any purpose.  If you post or release something derived from this code, I'd appreciate it if you included a link to this repository and/or mrjohnk's original github repository.
+
+# BUILD #
+
+I'm building this with the Arduino 1.0.6 IDE, using the Sparkfun Pro Micro 3.3v hardware definitions from here:
+
+https://github.com/sparkfun/SF32u4_boards/
+
+The code uses the transactional mode SPI library from here:
+
+https://github.com/PaulStoffregen/SPI
+
