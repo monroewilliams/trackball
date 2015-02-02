@@ -79,8 +79,6 @@ void click()
 
 void loop() 
 {
-  unsigned long loop_start = millis();
-  
   // Poll sensors for mouse movement
   {
       sensor_1.read_motion();
