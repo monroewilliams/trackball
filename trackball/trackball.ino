@@ -73,6 +73,7 @@ void setup()
 void click()
 {
   digitalWrite(piezo_pin, HIGH);
+  delay(1);
   digitalWrite(piezo_pin, LOW);
 }
 
