@@ -3,6 +3,10 @@
 
 #include "adns.h"
 
+// This defines firmware_length and firmware_data
+
+#include "ADNS9800_firmware.h"
+
 extern "C"
 {
     extern byte serial_debug;
@@ -171,14 +175,9 @@ void adns::write_reg(byte reg_addr, byte data)
   delayMicroseconds(mcs_tSWW - mcs_tSCLK_NCS_write); // Could be shortened, but is looks like a safe lower bound 
 }
 
-extern "C"
-{
-  extern unsigned short firmware_length;
-  extern prog_uchar firmware_data[];
-};
-
 void adns::upload_firmware()
 {  
+
   // send the firmware to the chip, cf p.18 of the datasheet
 //  Serial.println("Uploading firmware...");
   // set the configuration_IV register in 3k firmware mode

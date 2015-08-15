@@ -22,11 +22,6 @@ This code may be used for any purpose.  If you post or release something derived
 
 # BUILD #
 
-I'm building this with the Arduino 1.0.6 IDE, using the Sparkfun Pro Micro 3.3v hardware definitions from here:
+I'm building this with the Arduino 1.6.5 IDE, using this Sparkfun board definitions URL in the boards manager:
 
-https://github.com/sparkfun/SF32u4_boards/
-
-The code uses the transactional mode SPI library from here:
-
-https://github.com/PaulStoffregen/SPI
-
+https://raw.githubusercontent.com/sparkfun/Arduino_Boards/master/IDE_Board_Manager/package_sparkfun_index.json

@@ -8,7 +8,7 @@
 unsigned short firmware_length = 3070;
 
 
-prog_uchar firmware_data[] PROGMEM = {
+const uint8_t PROGMEM firmware_data[] = {
 0x03,
 0xa6,
 0x68,
