@@ -43,12 +43,11 @@ void setup()
 {
   Mouse.begin();
   
-  if (SERIAL_DEBUG)
-  {
-    Serial.begin(9600);
-    // Add a short delay so I can get the console open before things start happening.
-    delay(2000);
-  }
+#if SERIAL_DEBUG
+  Serial.begin(9600);
+  // Add a short delay so I can get the console open before things start happening.
+  delay(2000);
+#endif
     
   SPI.begin();
   
