@@ -7,10 +7,7 @@
 
 #include "ADNS9800_firmware.h"
 
-extern "C"
-{
-    extern byte serial_debug;
-}
+#include "trackball.h"
 
 // Registers
 enum
@@ -109,17 +106,11 @@ void adns::init (int chip_select)
   byte laser_ctrl0 = this->read_reg(REG_LASER_CTRL0);
   this->write_reg(REG_LASER_CTRL0, laser_ctrl0 & 0xf0 );
   
-  if (serial_debug)
-  {
-    Serial.println("Chip initialized");
-  }
+  DebugLogln(F("Chip initialized"));
   
   delay(1);
   
-  if (serial_debug)
-  {
-    this->dispRegisters();
-  }
+  this->dispRegisters();
   
   delay(100);
 }
@@ -149,13 +140,14 @@ byte adns::read_reg(byte reg_addr)
   delayMicroseconds(mcs_tSCLK_NCS_read);
   this->com_end();
   delayMicroseconds(mcs_tSRW - mcs_tSCLK_NCS_read);
-  
+
+  // This is too spammy during normal use, but can be useful when debugging sensor issues.
   if (0)
   {
-      Serial.print("read register ");
-      Serial.print(reg_addr,HEX);
-      Serial.print(", value = ");
-      Serial.println(data,HEX);
+      DebugLog(F("read register "));
+      DebugLog(reg_addr,HEX);
+      DebugLog(F(", value = "));
+      DebugLogln(data,HEX);
   }
   
   return data;
@@ -179,7 +171,7 @@ void adns::upload_firmware()
 {  
 
   // send the firmware to the chip, cf p.18 of the datasheet
-//  Serial.println("Uploading firmware...");
+//  DebugLogln(F("Uploading firmware..."));
   // set the configuration_IV register in 3k firmware mode
   this->write_reg(REG_Configuration_IV, 0x02); // bit 1 = 1 for 3k mode, other bits are reserved 
   
@@ -211,6 +203,7 @@ void adns::upload_firmware()
 
 void adns::dispRegisters(void)
 {
+#if SERIAL_DEBUG
   int oreg[7] = 
   {
     0x00,0x3F,0x2A,0x02, REG_Configuration_I
@@ -225,13 +218,14 @@ void adns::dispRegisters(void)
   for(rctr=0; rctr<5; rctr++)
   {
     regres = this->read_reg(oreg[rctr]);
-    Serial.println("---");
-    Serial.println(oregname[rctr]);
-    Serial.println(oreg[rctr],HEX);
-    Serial.println(regres,BIN);  
-    Serial.println(regres,HEX);  
+    DebugLogln("---");
+    DebugLogln(oregname[rctr]);
+    DebugLogln(oreg[rctr],HEX);
+    DebugLogln(regres,BIN);  
+    DebugLogln(regres,HEX);  
     delay(1);
   }
+#endif
 }
 
 void adns::read_motion()
@@ -282,19 +276,18 @@ void adns::read_motion_burst()
   this->x = bytes2int(burst[3], burst[2]);  
   this->y = bytes2int(burst[5], burst[4]);  
 
-  if (serial_debug)
-  {
-    Serial.print("burst motion data:");
+#if SERIAL_DEBUG
+    DebugLog(F("burst motion data:"));
     for (int i = 0; i < 14; i++)
     {
-      Serial.print(burst[i], HEX);
-      Serial.print(" ");
+      DebugLog(burst[i], HEX);
+      DebugLog(F(" "));
     }
-    Serial.print(", x = ");
-    Serial.print(this->x);
-    Serial.print(", y = ");
-    Serial.println(this->y);
-  }
+    DebugLog(F(", x = "));
+    DebugLog(this->x);
+    DebugLog(F(", y = "));
+    DebugLogln(this->y);
+#endif 
   
 }
 

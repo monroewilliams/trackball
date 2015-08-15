@@ -1,6 +1,8 @@
 #include <SPI.h>
 #include <avr/pgmspace.h>
 
+#include "trackball.h"
+
 #include "adns.h"
 
 /*
@@ -23,7 +25,6 @@
 */
 
 byte initComplete = 0;
-byte serial_debug = 0;
 
 adns sensor_1;
 adns sensor_2;
@@ -42,7 +43,7 @@ void setup()
 {
   Mouse.begin();
   
-  if (serial_debug)
+  if (SERIAL_DEBUG)
   {
     Serial.begin(9600);
     // Add a short delay so I can get the console open before things start happening.
@@ -105,17 +106,18 @@ void loop()
           y = 0;
         }
       }
-      
+
+      // This is too spammy during normal use, but can be useful when debugging sensor input.
       if (0)
       {
-          Serial.print("1x = ");
-          Serial.print(sensor_1.x);
-          Serial.print(", 1y = ");
-          Serial.print(sensor_1.y);
-          Serial.print(", 2x = ");
-          Serial.print(sensor_2.x);
-          Serial.print(", 2y = ");
-          Serial.println(sensor_2.y);
+          DebugLog(F("1x = "));
+          DebugLog(sensor_1.x);
+          DebugLog(F(", 1y = "));
+          DebugLog(sensor_1.y);
+          DebugLog(F(", 2x = "));
+          DebugLog(sensor_2.x);
+          DebugLog(F(", 2y = "));
+          DebugLogln(sensor_2.y);
       }
       
       if ((x != 0) || (y != 0) || (scroll != 0))
@@ -136,11 +138,8 @@ void loop()
     {
       if (!Mouse.isPressed(name))
       {
-        if (serial_debug)
-        {
-          Serial.print("pressing mouse button ");
-          Serial.println(name);
-        }
+        DebugLog(F("pressing mouse button "));
+        DebugLogln(name);
         Mouse.press(name);
       }
     }
@@ -148,11 +147,8 @@ void loop()
     {
       if (Mouse.isPressed(name))
       {
-        if (serial_debug)
-        {
-          Serial.print("releasing mouse button ");
-          Serial.println(name);
-        }
+        DebugLog(F("releasing mouse button "));
+        DebugLogln(name);
         Mouse.release(name);
       }
     }
