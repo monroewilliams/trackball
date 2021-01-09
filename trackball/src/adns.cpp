@@ -191,7 +191,7 @@ void adns::upload_firmware()
   
   // send all bytes of the firmware
   unsigned char c;
-  for(int i = 0; i < firmware_length; i++)
+  for(unsigned int i = 0; i < firmware_length; i++)
   { 
     c = (unsigned char)pgm_read_byte(firmware_data + i);
     SPI.transfer(c);
@@ -208,7 +208,7 @@ void adns::dispRegisters(void)
   {
     0x00,0x3F,0x2A,0x02, REG_Configuration_I
   };
-  char* oregname[] = 
+  const char* oregname[] = 
   {
     "Product_ID","Inverse_Product_ID","SROM_Version","Motion", "Configuration_I"
   };
