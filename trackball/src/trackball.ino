@@ -91,6 +91,18 @@ void loop()
       sensor_1.read_motion();
       sensor_2.read_motion();
       
+      if (sensor_1.x != 0 || sensor_1.y != 0 || sensor_2.x != 0 || sensor_2.y != 0)
+      {
+          DebugLog(F("1x = "));
+          DebugLog(sensor_1.x);
+          DebugLog(F(", 1y = "));
+          DebugLog(sensor_1.y);
+          DebugLog(F(", 2x = "));
+          DebugLog(sensor_2.x);
+          DebugLog(F(", 2y = "));
+          DebugLogln(sensor_2.y);
+      }
+
       int x = 0, y = 0, scroll = 0;
 
       x = -sensor_2.x;
@@ -105,24 +117,10 @@ void loop()
           scroll_accum += -((sensor_1.y + sensor_2.y) / 2);
           scroll = scroll_accum / scroll_tick;
           scroll_accum %= scroll_tick;
-          
           // When we're scrolling, disable x/y movement
           x = 0;
           y = 0;
         }
-      }
-
-      // This is too spammy during normal use, but can be useful when debugging sensor input.
-      if (0)
-      {
-          DebugLog(F("1x = "));
-          DebugLog(sensor_1.x);
-          DebugLog(F(", 1y = "));
-          DebugLog(sensor_1.y);
-          DebugLog(F(", 2x = "));
-          DebugLog(sensor_2.x);
-          DebugLog(F(", 2y = "));
-          DebugLogln(sensor_2.y);
       }
       
       if ((x != 0) || (y != 0) || (scroll != 0))
