@@ -204,25 +204,35 @@ void adns::upload_firmware()
 void adns::dispRegisters(void)
 {
 #if SERIAL_DEBUG
-  int oreg[7] = 
+  typedef struct
   {
-    0x00,0x3F,0x2A,0x02, REG_Configuration_I
-  };
-  const char* oregname[] = 
+    int id;
+    const char *name;
+  } regInfo;
+  #define REG(x) { REG_##x, #x }
+  regInfo oreg[] = 
   {
-    "Product_ID","Inverse_Product_ID","SROM_Version","Motion", "Configuration_I"
+    REG(Product_ID), 
+    REG(Inverse_Product_ID),
+    REG(SROM_ID),
+    REG(Motion), 
+    REG(Configuration_I), 
+    REG(Lift_Detection_Thr)
   };
+  #undef REG
+
   byte regres;
 
-  int rctr=0;
-  for(rctr=0; rctr<5; rctr++)
+  for(unsigned int rctr=0; rctr<(sizeof(oreg)/sizeof(oreg[0])); rctr++)
   {
-    regres = this->read_reg(oreg[rctr]);
-    DebugLogln("---");
-    DebugLogln(oregname[rctr]);
-    DebugLogln(oreg[rctr],HEX);
+    regres = this->read_reg(oreg[rctr].id);
+    DebugLog(oreg[rctr].name);
+    DebugLog(" (0x");
+    DebugLog(oreg[rctr].id,HEX);
+    DebugLog(")\n  = 0x");
+    DebugLog(regres,HEX);  
+    DebugLog(" / 0b");
     DebugLogln(regres,BIN);  
-    DebugLogln(regres,HEX);  
     delay(1);
   }
 #endif
