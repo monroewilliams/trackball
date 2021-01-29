@@ -1,11 +1,7 @@
 #include <SPI.h>
 #include <avr/pgmspace.h>
 
-#if ARDUINO >= 10606
-  // If we have support for pluggable HID/USB modules, make this device look like just a mouse.
-  #include <HID.h>
-  #include <Mouse.h>
-#endif
+#include <Mouse.h>
 
 #include "trackball.h"
 
