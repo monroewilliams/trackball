@@ -7,24 +7,27 @@
 
 #include "adns.h"
 
+
 /*
-  Pin assignments on Sparkfun Pro Micro:
-  
-  4 - left button
-  5 - middle button
-  6 - right button
-  3 - piezo speaker +
-  
-  16 - SPI MOSI (MO)
-  14 - SPI MISO (MI)
-  15 - SPI SCLK (SC)
-  18 - sensor 1 chip select (SS)
-  19 - sensor 2 chip select (SS)
-  
+  Common pin assignments:
+  standard SPI (MOSI, MISO, SCLK)
   VCC - sensor VI
   GND - sensor DG & AG
-  
 */
+
+#ifdef ARDUINO_AVR_PROMICRO8
+  // Pin assignments on Sparkfun Pro Micro:
+  // piezo speaker +
+  #define PIN_PIEZO 3
+  // Mouse button inputs
+  #define PIN_BUTTON_LEFT 4 
+  #define PIN_BUTTON_MIDDLE 5 
+  #define PIN_BUTTON_RIGHT 6 
+  // Select pins for sensors
+  #define PIN_SENSOR_1_SELECT 18  
+  #define PIN_SENSOR_2_SELECT 19  
+#endif  
+
 
 byte initComplete = 0;
 
@@ -34,9 +37,7 @@ adns sensor_2;
 // Button state polling/tracking
 const int buttonCount = 3;
 const char buttonNames[3] = {MOUSE_LEFT, MOUSE_MIDDLE, MOUSE_RIGHT};
-const int buttonPins[3] = {4, 5, 6};
-
-const int piezo_pin = 3;
+const int buttonPins[3] = {PIN_BUTTON_LEFT, PIN_BUTTON_MIDDLE, PIN_BUTTON_RIGHT};
 
 const int scroll_tick = 128;
 int scroll_accum = 0;
@@ -53,8 +54,8 @@ void setup()
     
   SPI.begin();
   
-  sensor_1.init(18);
-  sensor_2.init(19);
+  sensor_1.init(PIN_SENSOR_1_SELECT);
+  sensor_2.init(PIN_SENSOR_2_SELECT);
   
   sensor_1.set_cpi(2400);
   sensor_1.set_snap_angle(1);
@@ -67,16 +68,16 @@ void setup()
   }
   
   // Piezo output
-  pinMode(piezo_pin, OUTPUT);
+  pinMode(PIN_PIEZO, OUTPUT);
   
   initComplete = 1;
 }
 
 void click()
 {
-  digitalWrite(piezo_pin, HIGH);
+  digitalWrite(PIN_PIEZO, HIGH);
   delay(1);
-  digitalWrite(piezo_pin, LOW);
+  digitalWrite(PIN_PIEZO, LOW);
 }
 
 
