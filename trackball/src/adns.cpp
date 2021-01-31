@@ -76,7 +76,10 @@ enum
 
 static inline int bytes2int(byte h, byte l)
 {
-  return (((int)h) << 8) | (unsigned int)l;  
+  int result = (int8_t)h;
+  result *= 256;
+  result += l;
+  return result;
 }
 
 void adns::init (int chip_select)
