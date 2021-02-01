@@ -1,11 +1,18 @@
 #include <SPI.h>
-#include <avr/pgmspace.h>
 
-#include <Mouse.h>
-
+#include "Adafruit_TinyUSB.h"
 #include "trackball.h"
-
 #include "adns.h"
+
+// HID report descriptor using TinyUSB's template
+// Single Report (no ID) descriptor
+uint8_t const desc_hid_report[] =
+{
+  TUD_HID_REPORT_DESC_MOUSE()
+};
+
+// USB HID object
+Adafruit_USBD_HID usb_hid;
 
 
 /*
@@ -16,6 +23,7 @@
 */
 
 #ifdef ARDUINO_AVR_PROMICRO8
+  #include <avr/pgmspace.h>
   // Pin assignments on Sparkfun Pro Micro:
   // piezo speaker +
   #define PIN_PIEZO 3
@@ -28,28 +36,56 @@
   #define PIN_SENSOR_2_SELECT 19  
 #endif  
 
-
-byte initComplete = 0;
+#ifdef SEEED_XIAO_M0
+  // Pin assignments on Seeeduino XIAO:
+  // piezo speaker +
+  #define PIN_PIEZO 5
+  // Mouse button inputs
+  #define PIN_BUTTON_LEFT 0 
+  #define PIN_BUTTON_RIGHT 1 
+  #define PIN_BUTTON_MIDDLE 2 
+  // Select pins for sensors
+  #define PIN_SENSOR_1_SELECT 7  
+  #define PIN_SENSOR_2_SELECT 6  
+#endif
 
 adns sensor_1;
 adns sensor_2;
 
 // Button state polling/tracking
-const int buttonCount = 3;
-const char buttonNames[3] = {MOUSE_LEFT, MOUSE_MIDDLE, MOUSE_RIGHT};
-const int buttonPins[3] = {PIN_BUTTON_LEFT, PIN_BUTTON_MIDDLE, PIN_BUTTON_RIGHT};
+const char buttonNames[] = { MOUSE_BUTTON_LEFT, MOUSE_BUTTON_RIGHT, MOUSE_BUTTON_MIDDLE };
+const int buttonPins[] = { PIN_BUTTON_LEFT, PIN_BUTTON_RIGHT,  PIN_BUTTON_MIDDLE };
+const int buttonCount = sizeof(buttonPins) / sizeof(buttonPins[0]);
+char buttons;
 
 const int scroll_tick = 128;
 int scroll_accum = 0;
 
 void setup() 
 {
-  Mouse.begin();
-  
+  // pinMode(LED_BUILTIN, OUTPUT);
+
+  // Free up hardware serial pins for our use.
+  Serial1.end();
+
+  // TinyUSB Setup
+  usb_hid.setPollInterval(2);
+  usb_hid.setReportDescriptor(desc_hid_report, sizeof(desc_hid_report));
+  // usb_hid.setStringDescriptor("MWTrackball");
+
+  usb_hid.begin();
+
+  // wait until device mounted
+  while( !USBDevice.mounted() ) delay(1);
+
+
 #if SERIAL_DEBUG
-  Serial.begin(9600);
+  Serial.begin(115200);
+  while (!Serial);
+
   // Add a short delay so I can get the console open before things start happening.
-  delay(3000);
+  delay(5000);
+  Serial.println(F("Opened serial port"));
 #endif
     
   SPI.begin();
@@ -67,23 +103,36 @@ void setup()
       pinMode(buttonPins[i], INPUT_PULLUP);
   }
   
+#ifdef PIN_PIEZO
   // Piezo output
   pinMode(PIN_PIEZO, OUTPUT);
-  
-  initComplete = 1;
+#endif
+
+#if SERIAL_DEBUG
+  Serial.println(F("Initialization complete."));
+  delay(100);
+#endif
+
 }
 
 void click()
 {
+#ifdef PIN_PIEZO
   digitalWrite(PIN_PIEZO, HIGH);
   delay(1);
   digitalWrite(PIN_PIEZO, LOW);
+#endif
 }
 
 
 void loop() 
 {
+  bool sendReport = false;
+  bool sendWakeup = false;
+  int x = 0, y = 0, scroll = 0;
+
   // Poll sensors for mouse movement
+  if(1)
   {
       sensor_1.read_motion();
       sensor_2.read_motion();
@@ -100,7 +149,6 @@ void loop()
           DebugLogln(sensor_2.y);
       }
 
-      int x = 0, y = 0, scroll = 0;
 
       x = -sensor_2.x;
       y = sensor_1.x;
@@ -126,33 +174,50 @@ void loop()
         {
           click();
         }
-        Mouse.move(x, y, scroll);        
+        sendReport = true;
       }
   }
   
   // Poll for button states 
-  for(int i=0; i<buttonCount; i++)
+  if(1)
   {
-    int name = buttonNames[i];
-    if (digitalRead(buttonPins[i]) == LOW)
+    for(int i=0; i<buttonCount; i++)
     {
-      if (!Mouse.isPressed(name))
+      int name = buttonNames[i];
+      if (digitalRead(buttonPins[i]) == LOW)
       {
-        DebugLog(F("pressing mouse button "));
-        DebugLogln(name);
-        Mouse.press(name);
+        if (!(buttons && name))
+        {
+          DebugLog(F("pressing mouse button "));
+          DebugLogln(name);
+          buttons |= name;
+          sendReport = true;
+          sendWakeup = true;
+        }
       }
-    }
-    else
-    {
-      if (Mouse.isPressed(name))
+      else
       {
-        DebugLog(F("releasing mouse button "));
-        DebugLogln(name);
-        Mouse.release(name);
+        if (buttons && name)
+        {
+          DebugLog(F("releasing mouse button "));
+          DebugLogln(name);
+          buttons &= ~name;
+          sendReport = true;
+          sendWakeup = true;
+        }
       }
     }
   }
+  if (sendWakeup && USBDevice.suspended())
+  {
+    USBDevice.remoteWakeup();
+  }
+  if (sendReport)
+  {
+      usb_hid.mouseReport(0, buttons, x, y, scroll, 0);
+  }
+
+  delay(1);
 }
 
 
