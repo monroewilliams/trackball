@@ -81,10 +81,12 @@ void setup()
 
 #if SERIAL_DEBUG
   Serial.begin(115200);
+
+  // Wait for the serial port to be opened.
   while (!Serial);
 
   // Add a short delay so I can get the console open before things start happening.
-  delay(5000);
+  // delay(3000);
   Serial.println(F("Opened serial port"));
 #endif
     
