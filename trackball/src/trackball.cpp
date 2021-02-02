@@ -96,9 +96,9 @@ void setup()
   sensor_2.init(PIN_SENSOR_2_SELECT);
   
   sensor_1.set_cpi(2400);
-  sensor_1.set_snap_angle(1);
+  // sensor_1.set_snap_angle(1);
   sensor_2.set_cpi(2400);
-  sensor_2.set_snap_angle(1);
+  // sensor_2.set_snap_angle(1);
 
   for(int i=0; i<buttonCount; i++)
   {
@@ -151,25 +151,41 @@ void loop()
           DebugLogln(sensor_2.y);
       }
 
-
-      x = -sensor_2.x;
-      y = sensor_1.x;
-      
-      // Figure out if we should scroll
-      if(1)
+      if(0)
       {
-        if ((abs(sensor_1.y) > (abs(sensor_1.x) * 2)) && (abs(sensor_2.y) > (abs(sensor_2.x) * 2)))
-        {
-          // Looks like we're scrolling more than not.  Take the average of the two sensors' y deltas as the scroll amount.
-          scroll_accum += -((sensor_1.y + sensor_2.y) / 2);
-          scroll = scroll_accum / scroll_tick;
-          scroll_accum %= scroll_tick;
-          // When we're scrolling, disable x/y movement
-          x = 0;
-          y = 0;
-        }
+        // Original sensor arrangement (s1 at 180 and s2 at 270)
+        x = -sensor_2.x;
+        y = sensor_1.x;
       }
-      
+      else
+      {
+        // New sensor arrangement (sensors at 180 and 270 + 45)
+        // Sensors are also tilted down by about 30 degrees, for easier mounting, but I don't _think_ that changes the numbers.
+        
+        // The y sensor reading is correct as-is.
+        y = sensor_1.x;
+
+        // The x sensor will be "contaminated" with a Y component, and also attenuated due to being off-axis.
+        x = (
+              - sensor_2.x                  // original amount
+              - (y * (1.0 / sqrtf(2.0)))    // subtract out y
+            ) * sqrtf(2.0);                 // and scale up to counter attenuation
+
+      }
+
+      // Figure out if we should scroll
+      if ((abs(sensor_1.y) > (abs(sensor_1.x) * 2)) && (abs(sensor_2.y) > (abs(sensor_2.x) * 2)))
+      {
+        // Looks like we're scrolling more than not.  Take the average of the two sensors' y deltas as the scroll amount.
+        scroll_raw = -((sensor_1.y + sensor_2.y) / 2);
+        scroll_accum += scroll_raw;
+        scroll = scroll_accum / scroll_tick;
+        scroll_accum %= scroll_tick;
+        // When we're scrolling, disable x/y movement
+        x = 0;
+        y = 0;
+      }
+
       if ((x != 0) || (y != 0) || (scroll != 0))
       {
         if (scroll != 0)
