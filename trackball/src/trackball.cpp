@@ -4,11 +4,74 @@
 #include "trackball.h"
 #include "adns.h"
 
+#define USE_SCROLL_RESOLUTION_MULTIPLIER 1
+
 // HID report descriptor using TinyUSB's template
 // Single Report (no ID) descriptor
 uint8_t const desc_hid_report[] =
 {
+#if !USE_SCROLL_RESOLUTION_MULTIPLIER
   TUD_HID_REPORT_DESC_MOUSE()
+#else
+  HID_USAGE_PAGE ( HID_USAGE_PAGE_DESKTOP      )                   ,
+  HID_USAGE      ( HID_USAGE_DESKTOP_MOUSE     )                   ,
+  HID_COLLECTION ( HID_COLLECTION_APPLICATION  )                   ,
+    /* Report ID if any */
+    // __VA_ARGS__ 
+    HID_USAGE      ( HID_USAGE_DESKTOP_POINTER )                   ,
+    HID_COLLECTION ( HID_COLLECTION_PHYSICAL   )                   ,
+      HID_USAGE_PAGE  ( HID_USAGE_PAGE_BUTTON  )                   ,
+        HID_USAGE_MIN   ( 1                                      ) ,
+        HID_USAGE_MAX   ( 5                                      ) ,
+        HID_LOGICAL_MIN ( 0                                      ) ,
+        HID_LOGICAL_MAX ( 1                                      ) ,
+        /* Left, Right, Middle, Backward, Forward buttons */ 
+        HID_REPORT_COUNT( 5                                      ) ,
+        HID_REPORT_SIZE ( 1                                      ) ,
+        HID_INPUT       ( HID_DATA | HID_VARIABLE | HID_ABSOLUTE ) ,
+        /* 3 bit padding */ 
+        HID_REPORT_COUNT( 1                                      ) ,
+        HID_REPORT_SIZE ( 3                                      ) ,
+        HID_INPUT       ( HID_CONSTANT                           ) ,
+      HID_USAGE_PAGE  ( HID_USAGE_PAGE_DESKTOP )                   ,
+        /* X, Y position [-127, 127] */ 
+        HID_USAGE       ( HID_USAGE_DESKTOP_X                    ) ,
+        HID_USAGE       ( HID_USAGE_DESKTOP_Y                    ) ,
+        HID_LOGICAL_MIN ( 0x81                                   ) ,
+        HID_LOGICAL_MAX ( 0x7f                                   ) ,
+        HID_REPORT_COUNT( 2                                      ) ,
+        HID_REPORT_SIZE ( 8                                      ) ,
+        HID_INPUT       ( HID_DATA | HID_VARIABLE | HID_RELATIVE ) ,
+    HID_COLLECTION_END                                             , 
+    HID_COLLECTION ( HID_COLLECTION_LOGICAL   )                    ,
+      HID_USAGE_PAGE  ( HID_USAGE_PAGE_DESKTOP )                   ,
+        HID_USAGE       ( HID_USAGE_DESKTOP_RESOLUTION_MULTIPLIER) ,
+        HID_LOGICAL_MIN ( 0                                      ) ,
+        HID_LOGICAL_MAX ( 255                                    ) ,
+        HID_PHYSICAL_MIN( 1                                      ) ,
+        HID_PHYSICAL_MAX_N( 256, 2                               ) ,
+        HID_REPORT_COUNT( 1                                      ) ,
+        HID_REPORT_SIZE ( 8                                      ) ,
+        HID_INPUT       ( HID_DATA | HID_VARIABLE | HID_ABSOLUTE ) ,
+      HID_USAGE_PAGE  ( HID_USAGE_PAGE_DESKTOP )                   ,
+        /* Veritcal wheel scroll [-127, 127] */ 
+        HID_USAGE       ( HID_USAGE_DESKTOP_WHEEL                )  ,
+        HID_LOGICAL_MIN ( 0x81                                   )  ,
+        HID_LOGICAL_MAX ( 0x7f                                   )  ,
+        HID_REPORT_COUNT( 1                                      )  ,
+        HID_REPORT_SIZE ( 8                                      )  ,
+        HID_INPUT       ( HID_DATA | HID_VARIABLE | HID_RELATIVE )  ,
+      HID_USAGE_PAGE  ( HID_USAGE_PAGE_CONSUMER ), 
+       /* Horizontal wheel scroll [-127, 127] */ 
+        HID_USAGE_N     ( HID_USAGE_CONSUMER_AC_PAN, 2           ), 
+        HID_LOGICAL_MIN ( 0x81                                   ), 
+        HID_LOGICAL_MAX ( 0x7f                                   ), 
+        HID_REPORT_COUNT( 1                                      ), 
+        HID_REPORT_SIZE ( 8                                      ), 
+        HID_INPUT       ( HID_DATA | HID_VARIABLE | HID_RELATIVE ), 
+    HID_COLLECTION_END                                            , 
+  HID_COLLECTION_END 
+#endif
 };
 
 // USB HID object
@@ -131,7 +194,7 @@ void loop()
 {
   bool sendReport = false;
   bool sendWakeup = false;
-  int x = 0, y = 0, scroll = 0;
+  int x = 0, y = 0, scroll = 0, scroll_raw = 0;
 
   // Poll sensors for mouse movement
   if(1)
@@ -232,7 +295,33 @@ void loop()
   }
   if (sendReport)
   {
+#if !USE_SCROLL_RESOLUTION_MULTIPLIER
       usb_hid.mouseReport(0, buttons, x, y, scroll, 0);
+#else
+    // With the resolution multiplier, we have deviated from the standard mouse report.
+    // Roll our own here.
+    typedef struct TU_ATTR_PACKED
+    {
+      uint8_t buttons;    /**< buttons mask for currently pressed buttons in the mouse. */
+      int8_t  x;          /**< Current delta x movement of the mouse. */
+      int8_t  y;          /**< Current delta y movement on the mouse. */
+      int8_t  multiplier; /**< Mouse wheel resolution multiplier */
+      int8_t  wheel;      /**< Current delta wheel movement on the mouse. */
+      int8_t  pan;        // using AC Pan
+    } report_t;
+
+    report_t report =
+    {
+      .buttons = buttons,
+      .x       = int8_t(x),
+      .y       = int8_t(y),
+      .multiplier = int8_t(scroll_tick),
+      .wheel   = int8_t(scroll_raw),
+      .pan     = 0
+    };
+
+    (void)tud_hid_report(0, &report, sizeof(report));
+#endif
   }
 
   delay(1);
