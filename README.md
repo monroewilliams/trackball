@@ -1,8 +1,12 @@
 # README #
 
-This is the code to run a trackball I'm building for myself.  The main hardware it's built around is a Sparkfun Pro Micro:
+This is the code to run a trackball I'm building for myself.  The original hardware it was built around was a Sparkfun Pro Micro:
 
 https://www.sparkfun.com/products/12587
+
+but I've currently switched over to a Seeeduino XIAO:
+
+https://wiki.seeedstudio.com/Seeeduino-XIAO/
 
 and two ADNS-9800 laser optical mouse sensors, which I got from here (including breakout boards and lenses):
 
@@ -22,6 +26,7 @@ This code may be used for any purpose.  If you post or release something derived
 
 # BUILD #
 
-I'm building this with the Arduino 1.6.5 IDE, using this Sparkfun board definitions URL in the boards manager:
+I'm building this with PlatformIO/VSCode. The "trackball" subdirectory should open directly with VSCode.
 
-https://raw.githubusercontent.com/sparkfun/Arduino_Boards/master/IDE_Board_Manager/package_sparkfun_index.json
+I do my work on Mac OS X, so I don't know if there will be any issues using it on Windows or Linux.
+
