@@ -267,7 +267,7 @@ void loop()
       int name = buttonNames[i];
       if (digitalRead(buttonPins[i]) == LOW)
       {
-        if (!(buttons && name))
+        if (!(buttons & name))
         {
           DebugLog(F("pressing mouse button "));
           DebugLogln(name);
@@ -278,7 +278,7 @@ void loop()
       }
       else
       {
-        if (buttons && name)
+        if (buttons & name)
         {
           DebugLog(F("releasing mouse button "));
           DebugLogln(name);
