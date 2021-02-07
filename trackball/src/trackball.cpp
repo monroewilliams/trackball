@@ -132,9 +132,9 @@ void setup()
   Serial1.end();
 
   // TinyUSB Setup
+  USBDevice.setProductDescriptor("MWTrackball");
   usb_hid.setPollInterval(2);
   usb_hid.setReportDescriptor(desc_hid_report, sizeof(desc_hid_report));
-  // usb_hid.setStringDescriptor("MWTrackball");
 
   usb_hid.begin();
 
