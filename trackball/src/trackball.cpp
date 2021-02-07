@@ -1,6 +1,7 @@
 #include <SPI.h>
 
 #include "Adafruit_TinyUSB.h"
+#include "Quaternion.h"
 #include "trackball.h"
 #include "adns.h"
 
@@ -124,6 +125,20 @@ char buttons;
 const int scroll_tick = 128;
 int scroll_accum = 0;
 
+// Location of the sensors around the ball.
+// Azimith is degrees clockwise from 12 o'clock when looking down on the ball from the user's perspective.
+// Elevation is degrees down from horizontal.
+const float sensor_1_azimuth = 180;
+const float sensor_2_azimuth = 270 + 45;
+const float sensor_1_elevation = 30;
+const float sensor_2_elevation = 30;
+// Radius of the ball itself
+const float ball_radius = 57.0 / 2;
+// Sensor counts per mm (converted from counts per inch)
+const float sensor_cpmm = 2400 / 25.4;
+// Multiplier to convert sensor movement to radians of rotation.
+const float counts_to_radians = 1.0 / (sensor_cpmm * ball_radius);
+
 void setup() 
 {
   // pinMode(LED_BUILTIN, OUTPUT);
@@ -146,11 +161,8 @@ void setup()
   Serial.begin(115200);
 
   // Wait for the serial port to be opened.
-  while (!Serial);
+  // while (!Serial);
 
-  // Add a short delay so I can get the console open before things start happening.
-  // delay(3000);
-  Serial.println(F("Opened serial port"));
 #endif
     
   SPI.begin();
@@ -189,6 +201,27 @@ void click()
 #endif
 }
 
+float deg2rad(float x)
+{
+  return x * DEG_TO_RAD;
+}
+float rad2deg(float x)
+{
+  return x * RAD_TO_DEG;
+}
+
+void print(Quaternion &q)
+{
+    DebugLog("(");
+    DebugLog(q.a, 5);
+    DebugLog(", ");
+    DebugLog(q.b, 5);
+    DebugLog(", ");
+    DebugLog(q.c, 5);
+    DebugLog(", ");
+    DebugLog(q.d, 5);
+    DebugLog(")");
+}
 
 void loop() 
 {
@@ -204,16 +237,28 @@ void loop()
       
       if (sensor_1.x != 0 || sensor_1.y != 0 || sensor_2.x != 0 || sensor_2.y != 0)
       {
-          DebugLog(F("1x = "));
-          DebugLog(sensor_1.x);
-          DebugLog(F(", 1y = "));
-          DebugLog(sensor_1.y);
-          DebugLog(F(", 2x = "));
-          DebugLog(sensor_2.x);
-          DebugLog(F(", 2y = "));
-          DebugLogln(sensor_2.y);
-      }
+          // DebugLog(F("1x = "));
+          // DebugLog(sensor_1.x);
+          // DebugLog(F(", 1y = "));
+          // DebugLog(sensor_1.y);
+          // DebugLog(F(", 2x = "));
+          // DebugLog(sensor_2.x);
+          // DebugLog(F(", 2y = "));
+          // DebugLogln(sensor_2.y);
 
+        // Calculate the rotation of the ball around x, y, and z axes.
+        // Treat each sensor's x/y motion report as an x/y rotation in that sensor's reference frame
+        Quaternion sensor_1_motion = Quaternion::from_euler_rotation(sensor_1.x * counts_to_radians, sensor_1.y * counts_to_radians, 0);
+        Quaternion sensor_2_motion = Quaternion::from_euler_rotation(sensor_2.x * counts_to_radians, sensor_2.y * counts_to_radians, 0);
+
+        DebugLog("1: ");
+        print(sensor_1_motion);
+        DebugLog(", 2: ");
+        print(sensor_2_motion);
+        DebugLogln();
+      }
+      
+      
       if(0)
       {
         // Original sensor arrangement (s1 at 180 and s2 at 270)
