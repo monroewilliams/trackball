@@ -324,7 +324,8 @@ void loop()
 #endif
   }
 
-  delay(1);
+  // 8ms puts our updates around 120hz, which should be sufficient.
+  delay(8);
 }
 
 
