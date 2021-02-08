@@ -25,9 +25,13 @@ bearing_spacing=[
 
 sensor_angle=60;
 sensor_skew_angle=10;
-sensor_spacing = [
-    [0, 0, 180],
-    [0, 0, 45]
+
+// Sensor params are:
+// - location angle (clockwise from top)
+// - sensor needs bottom access cutout (boolean)
+sensor_params = [
+    [180, true],
+    [45, true]
 ];
 sensor_clearance=2;
 lens_thickness=3.3;
@@ -39,25 +43,70 @@ sensor_board_clearance=0;
 ball_radius=ball_diameter/2;
 recess_radius=ball_radius + ball_clearance;
 
+// Shorthand for the minimum z coordinate
+bottom = -(recess_radius + bottom_clearance);
+
 // Button params are:
-// - location angle (clockwise from top)
-// - distance from center
-// - tilt angle
-// - cutout rotation
+// 0 - azimuth angle (clockwise from top)
+// 1 - elevation angle (downwards from level)
+// 2 - distance from ball surface to button center (takes ball radius into account)
+// 3 - tilt angle away from ball (additive with elevation angle)
+// 4 - tilt angle in the clockwise direction
+// 5 - cutout rotation
 button_params = [
-    [180 + 10, 40, 30, 0],
-    [30,       40, 30, 45]
+    [100, 21, 13, 3, 11, -3],
+    [-60, 30, 13, 24, 0, 0]
 ];
+
+module button_transform(params)
+{
+    rotate([0, 0, params[0]])
+    rotate([-params[1], 0, 0])
+    translate([0, ball_radius + params[2], 0])
+    rotate([0, params[4], 0])
+    rotate(-[params[3], 0, 0])
+    rotate([0, 0, params[5]]) 
+    children();
+}
 
 button_pod_diameter = 20;
 
+module ccube(x, y, z)
+{
+    translate([0, 0, z/2])
+    cube(center=true, [x,y, abs(z)]);
+}
+
+module rrect(x, y, r)
+{
+    translate([-x/2, -y/2, 0])
+    translate([r, r, 0])
+    offset(r, $rs=30)
+    square([x - (r * 2), y - (r * 2)]);
+}
+
+module shadow_hull()
+{
+    // This creates an object which is a hull of the object itself and its shadow on the x/y plane.
+    hull()
+    {
+        // the child object
+        children();
+
+        // the projection of the child object
+        translate([0, 0, bottom - 1]) 
+        linear_extrude(height=1)
+        projection()
+        children();
+    }
+}
 
 module ball()
 {
     color("red") sphere(d=ball_diameter);
 }
 
-module ball_and_bearings_cutout()
+module ball_cutout()
 {
     // render()
     union()
@@ -71,6 +120,17 @@ module ball_and_bearings_cutout()
         // rotate([0, 35, 0])
         // cylinder(h=30, r = recess_radius);
 
+        // bottom hole
+        translate ([0, 0, -100])
+        cylinder(h=100, d = hole_diameter);
+    }
+}
+
+module bearing_cutouts()
+{
+    // render()
+    union()
+    {
         // bearing holes
         for(i = bearing_spacing )
         {
@@ -89,35 +149,28 @@ module ball_and_bearings_cutout()
     }
 }
 
-module ccube(x, y, z)
+module button_cutout()
 {
-    translate([0, 0, z/2])
-    cube(center=true, [x,y, abs(z)]);
-}
-
-module rrect(x, y, r)
-{
-    translate([-x/2, -y/2, 0])
-    translate([r, r, 0])
-    offset(r, $rs=30)
-    square([x - (r * 2), y - (r * 2)]);
-}
-
-module key_cutout()
-{
-    translate([0, 0, 0])
+    // render()
     union() 
     {
-        
-        translate([0, 0, -20])
+        translate([0, 0, -10])
         {
-            ccube(14, 14, 40);
+            ccube(14, 14, 20);
             // rotate([0, 0, 0])
             // translate([20, 0, 0])
             // ccube(40, 3, 20);
         }
 
         ccube(20, 20, 40);
+    }
+}
+
+module button_access_base()
+{
+    translate([0, 0, -10])
+    {
+        ccube(14, 14, 1);
     }
 }
 
@@ -189,7 +242,7 @@ module sensor_cutout()
     }
 }
 
-module sensor_access_cutout()
+module sensor_access_base()
 {
     // This is just the backside model, used to create an access hole.
     // the board is a 32mm circle, ~2mm thick.
@@ -230,51 +283,176 @@ module sensorpod()
     }
 }
 
-module handrest()
+tail_y_boundary = -80;
+
+module body_tail_cut()
 {
-    // color("white", 0.75)
-    difference()
-    {
+    // render()
+    translate([0, 0, bottom])
+    linear_extrude(height=-bottom, scale=[1.4,1])
+    {  
         intersection()
         {
-            // bottom surface
-            translate ([0, 0, -(recess_radius + bottom_clearance)])
-            ccube(300, 300, 300);
+            offset(-50) offset(50) 
+            union()
+            {
+                // match the left cut curve. This requires some tweaking.
+                cut_radius = 176;
+                // color("blue", 0.25)
+                translate([155 + 3 - ball_radius, 3])
+                circle(r=cut_radius);
 
-            // left cut
-            // rotate([0, 5, -10])
-            // translate([100, 0, 0])
-            // sphere(d=250);
-            rotate([0, 5, -10])
-            translate([124, 0, 0])
-            cylinder(center=true, d=300, h=250);
-            
-            // right cut
-            rotate([0, -45, 10])
-            translate([-65, 0, 0])
-            sphere(d=150);
-
-            // back cut
-            rotate([25, 30, 0])
-            translate([0, 0, -60])
-            sphere(d=175);
-        
-            // // back cut 2
-            // // color("blue", 0.5)
-            // rotate([30, 45, 0])
-            // translate([0, 0, -60])
-            // sphere(d=175);
+                // Make a bit of a tail
+                translate([0, 27 - cut_radius])
+                circle(r = 20);
+            }
+            // Don't cut anything forward of tail_y_boundary with this shape.
+            translate([-100, -200 + tail_y_boundary])
+            square([200, 200]);
 
         }
-        // translate ([0, -(ball_radius + sensor_clearance), -(recess_radius + bottom_clearance)])
-        // rotate([0, 90, 0])
-        // color("blue", 0.5)
-        // cylinder(center=true, r=30, h=100);
     }
+}
+
+module body_left_cut()
+{
+    // render()
+    difference()
+    {
+        rotate([-10, 0, 0])
+        translate ([3- ball_radius, 0, bottom])
+        {
+            radius = 120;
+            downward_curve = 30;
+            ledge_height = 20;
+            // translate([radius, 0, -radius])
+            // cylinder(r=radius, h=radius * 2);
+
+            translate([0, 0, ledge_height])
+            rotate([0, downward_curve, 0])
+            translate([radius, 0, -ledge_height])
+            rotate([0, 0, 90])
+            rotate_extrude(angle=180)
+            intersection()
+            {
+                union()
+                {
+                    // fillet
+                    fillet_amount = 20;
+                    offset(-fillet_amount) 
+                    offset(fillet_amount)
+                    translate([radius, ledge_height])
+                    rotate([0, 0, -downward_curve])
+                    translate([-radius, -ledge_height])
+                    union()
+                    {
+                        // upright wall
+                        translate([-100, -100])
+                        square([100 + radius, 200]);
+
+                        // ledge
+                        translate([radius, ledge_height])
+                        rotate([0, 0, -15])
+                        translate([-radius, -ledge_height])
+                        translate([0, -100])
+                        square([radius + 25, 100 + ledge_height]);
+                        // square([100, 3]);
+                        // translate([0, -bottom])
+                        // circle(d=60);
+                    }
+
+                    // offset(fillet_amount)
+                    // offset(-fillet_amount) 
+                    // square([50, 50]);
+                }
+                // Clip to positive X
+                translate([0, -150])
+                square(300, 300);
+            }
+        }  
+        // // Don't cut anything aft of tail_y_boundary with this shape.
+        // translate([-100, -200 + tail_y_boundary, -100])
+        // cube([200, 200, 200]);
+    }
+}
+
+module body_right_cut()
+{
+    radius = 150;
+    // render()
+    rotate([0, -45, 40])
+    translate([ball_diameter / 4 + -radius, 0, 0])
+    sphere(r=radius);
+
+}
+
+module body_back_cut()
+{
+    // render()
+    translate([0, 0, bottom])
+    rotate_extrude(angle=360)
+    intersection()
+    {
+        translate([0, 0, 0])
+        {
+            // fillet
+            fillet_amount = 40;
+            offset(-fillet_amount) 
+            offset(fillet_amount)
+            union()
+            {
+                rotate([0, 0, -4])
+                square([200, 15]);
+                // square([50, 25]);
+                translate([0, 5])
+                circle(r=60);
+            }
+
+            // offset(fillet_amount)
+            // offset(-fillet_amount) 
+            // square([50, 50]);
+        }
+        // Clip to positive X
+        translate([0, 0])
+        square(300, 300);
+    }
+
 }
 
 module body()
 {
+    // render(4)
+    difference()
+    {
+        // color("white", 0.75)
+        intersection()
+        {
+            // Clip to above bottom surface
+            translate ([0, 0, bottom])
+            ccube(400, 400, 400);
+
+            union()
+            {
+                // left cut
+                body_left_cut();
+                // tail cut
+                body_tail_cut();
+            }
+                    
+            // right cut
+            body_right_cut();
+
+            // back cut
+            body_back_cut();
+        
+        }
+    }
+
+}
+
+module body_minimal()
+{
+    // render(4)
     difference()
     {
         // Main body
@@ -297,134 +475,134 @@ module body()
                 }
                         
                 // Pods for two sensors
-                for(i = sensor_spacing )
+                for(i = sensor_params )
                 {
-                    rotate(i)
+                    rotate(i[0])
                     sensorpod();
                 }
 
                 // Button pods
                 for(i = button_params )
                 {
-                    rotate([0, 0, i[0]])
-                    translate ([i[1], 0, -(recess_radius + bottom_clearance)])
-                    difference()
-                    {
-                        cylinder(h=25, d=button_pod_diameter);
-                        translate([0, 0, 12.5])
-                        rotate([0, i[2], 0]) 
-                        rotate([0, 0, i[3]]) 
-                        ccube(40, 40, 40);
-                    }
+                    shadow_hull()
+                    button_transform(i)
+                    translate([0, 0, -10])
+                    cylinder(h=10, d=button_pod_diameter);
                 }
             }
-
-            handrest();
         }
-        
-        // bottom hole
-        translate ([0, 0, -50])
-        cylinder(h=100, d = hole_diameter);
-                
-        // wire routing tunnel
-        wire_channel_size = 8;
-        translate([0, 0, -(recess_radius + bottom_clearance)])
-        rotate_extrude()
-        translate([27, 0, 0])
-        rotate([0, 0, 45])
-        rrect(wire_channel_size, wire_channel_size, 0);
-
-        rotate([0, 0, 57])
-        translate([0, 27, -(recess_radius + bottom_clearance)])
-        rotate([-90, 0, 0])
-        linear_extrude(height=60)
-        rotate([0, 0, 45])
-        rrect(wire_channel_size, wire_channel_size, 0);
-
-        rotate([0, 0, -95])
-        translate([-20, 27, -(recess_radius + bottom_clearance)])
-        rotate([0, -90, 0])
-        linear_extrude(height=60)
-        rotate([0, 0, 45])
-        rrect(wire_channel_size, wire_channel_size, 0);
     }
 
+}
+
+module wire_cutouts()
+{
+    // wire routing channels
+    wire_channel_size = 10;
+    translate([0, 0, bottom])
+    rotate_extrude()
+    translate([27, 0, 0])
+    circle(d=wire_channel_size, $fn=30);
+    // rotate([0, 0, 45])
+    // rrect(wire_channel_size, wire_channel_size, 0);
+
+    rotate([0, 0, 55])
+    translate([0, ball_radius + 15, bottom - 1])
+    sphere(r=20);
+    // cylinder(r=15, h=15);
+
+    rotate([0, 0, 35])
+    translate([0, ball_radius + 40, bottom - 1])
+    sphere(r=20);
+
+    // rotate([0, 0, 57])
+    // translate([0, 27, bottom])
+    // rotate([-90, 0, 0])
+    // linear_extrude(height=60)
+    // rotate([0, 0, 45])
+    // rrect(wire_channel_size, wire_channel_size, 0);
+
+    // rotate([0, 0, -95])
+    // translate([-20, 27, bottom])
+    // rotate([0, -90, 0])
+    // linear_extrude(height=60)
+    // rotate([0, 0, 45])
+    // rrect(wire_channel_size, wire_channel_size, 0);
+
+}
+
+module sensor_transform(params)
+{
+    rotate([0, 0, params[0]])
+    rotate([sensor_angle, 0, 0])
+    translate([0, 0, -(ball_radius + sensor_clearance)]) 
+    rotate([sensor_skew_angle, 0, 0])
+    children();
 }
 
 module sensor_cutouts()
 {
-    // two sensors
-    for(i = sensor_spacing )
+    // render(4)
+    for(params = sensor_params )
     {
         difference()
         {
-            rotate(i)
-            rotate([sensor_angle, 0, 0])
-            translate([0, 0, -(ball_radius + sensor_clearance)]) 
-            rotate([sensor_skew_angle, 0, 0])
+            sensor_transform(params)
             sensor_cutout();
             
             // Clip the cutouts to the top of the base ring.
-            translate([0, 0, body_height-(recess_radius + bottom_clearance)])
+            translate([0, 0, body_height + bottom])
             ccube(100, 100, -100);
         }
-    }
 
-    // Bottom access for sensor #1
-    color("blue")
-    hull()
-    {
-        rotate(sensor_spacing[0])
-        rotate([sensor_angle, 0, 0])
-        translate([0, 0, -(ball_radius + sensor_clearance)]) 
-        rotate([sensor_skew_angle, 0, 0])
-        sensor_access_cutout();
-        
-        translate([0, 0, -(recess_radius + bottom_clearance + 1)]) 
-        linear_extrude(height=1)
-        projection()
-        rotate(sensor_spacing[0])
-        rotate([sensor_angle, 0, 0])
-        translate([0, 0, -(ball_radius + sensor_clearance)]) 
-        rotate([sensor_skew_angle, 0, 0])
-        sensor_access_cutout();
+        if (params[1])
+        {
+            // Bottom access cutout
+            shadow_hull()
+            sensor_transform(params)
+            sensor_access_base();
+        }
     }
-
 }
 
-module key_cutouts()
+module button_cutouts()
 {
-        // Button cutouts
-        for(i = button_params )
-        {
-            rotate([0, 0, i[0]])
-            translate([i[1], 0, 12.5 -(recess_radius + bottom_clearance)])
-            rotate([0, i[2], 0]) 
-            rotate([0, 0, i[3]]) 
-            key_cutout();
-        }
+    // render(4)
+    for(params = button_params )
+    {
+        // cutout for the button itself
+        button_transform(params)
+        button_cutout();
+
+        // Bottom access cutout for the button
+        shadow_hull()
+        button_transform(params)
+        button_access_base();
+
+    }
 }
 
 $fa = 4;
 
-intersection() 
+module full()
 {
-    // render()
-    difference()
+    intersection() 
     {
-        body();
+        // render()
+        difference()
+        {
+            body();
+            ball_cutout();
+            bearing_cutouts();
+            sensor_cutouts();
+            button_cutouts();
+            wire_cutouts();
+        }
 
-        ball_and_bearings_cutout();
-        
-        sensor_cutouts();
-        key_cutouts();
+        // Isolate bearing hole for testing purposes
+    //    translate([0, 20, -10]) cube(center = true, [10, 20, 20]);
     }
-
-    // Isolate bearing hole for testing purposes
-//    translate([0, 20, -10]) cube(center = true, [10, 20, 20]);
 }
 
-//sensors();
-//  ball();
+full();
 
-// handrest();
