@@ -108,7 +108,6 @@ module ball()
 
 module ball_cutout()
 {
-    // render()
     union()
     {
         // spherical part of the recess
@@ -128,7 +127,6 @@ module ball_cutout()
 
 module bearing_cutouts()
 {
-    // render()
     union()
     {
         // bearing holes
@@ -151,7 +149,6 @@ module bearing_cutouts()
 
 module button_cutout()
 {
-    // render()
     union() 
     {
         translate([0, 0, -10])
@@ -176,7 +173,6 @@ module button_access_base()
 
 module sensor_cutout()
 {
-    // render()
     union()
     {
         // origin of the sensor is at the surface of the lens, 
@@ -287,7 +283,6 @@ tail_y_boundary = -80;
 
 module body_tail_cut()
 {
-    // render()
     translate([0, 0, bottom])
     linear_extrude(height=-bottom, scale=[1.4,1])
     {  
@@ -316,7 +311,6 @@ module body_tail_cut()
 
 module body_left_cut()
 {
-    // render()
     difference()
     {
         rotate([-10, 0, 0])
@@ -379,7 +373,6 @@ module body_left_cut()
 module body_right_cut()
 {
     radius = 150;
-    // render()
     rotate([0, -45, 40])
     translate([ball_diameter / 4 + -radius, 0, 0])
     sphere(r=radius);
@@ -388,7 +381,6 @@ module body_right_cut()
 
 module body_back_cut()
 {
-    // render()
     translate([0, 0, bottom])
     rotate_extrude(angle=360)
     intersection()
@@ -421,7 +413,6 @@ module body_back_cut()
 
 module body()
 {
-    // render(4)
     difference()
     {
         // color("white", 0.75)
@@ -452,7 +443,6 @@ module body()
 
 module body_minimal()
 {
-    // render(4)
     difference()
     {
         // Main body
@@ -542,7 +532,6 @@ module sensor_transform(params)
 
 module sensor_cutouts()
 {
-    // render(4)
     for(params = sensor_params )
     {
         difference()
@@ -567,7 +556,6 @@ module sensor_cutouts()
 
 module button_cutouts()
 {
-    // render(4)
     for(params = button_params )
     {
         // cutout for the button itself
@@ -588,7 +576,6 @@ module full()
 {
     intersection() 
     {
-        // render()
         difference()
         {
             body();
