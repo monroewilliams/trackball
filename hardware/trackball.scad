@@ -53,9 +53,11 @@ bottom = -(recess_radius + bottom_clearance);
 // 3 - tilt angle away from ball (additive with elevation angle)
 // 4 - tilt angle in the clockwise direction
 // 5 - cutout rotation
+// 6 - front overhang (should match up with parametrs in microswitch_cherry_mx.scad)
+// 7 - rear overhang (same)
 button_params = [
-    [100, 21, 13, 3, 11, -3],
-    [-60, 30, 13, 24, 0, 0]
+    [100, 28, 12, -3, 11, -4 - 90, 5, 15],
+    [-60, 38, 11, 20, -5, 5 + 90, 5, 5]
 ];
 
 module button_transform(params)
@@ -147,19 +149,32 @@ module bearing_cutouts()
     }
 }
 
-module button_cutout()
+module button_cutout(front_overhang = 0, rear_overhang = 0)
 {
     union() 
     {
         translate([0, 0, -10])
         {
+            // the hole the switch fits into
             ccube(14, 14, 20);
-            // rotate([0, 0, 0])
-            // translate([20, 0, 0])
-            // ccube(40, 3, 20);
         }
 
+        // 2mm cut around the hole for seating/overhang
         ccube(20, 20, 40);
+
+        // Front and rear overhangs are intended to match up with the overhang parameters in 
+        // microswitch-cherry-mx.scad.
+        if (front_overhang > 0)
+        {
+            translate([-10, 10, 0])
+            cube([20, front_overhang + 5, 6]);
+        }
+
+        if (rear_overhang > 0)
+        {
+            translate([-10, -10 -rear_overhang, 0])
+            cube([20, rear_overhang, 6]);
+        }
     }
 }
 
@@ -568,7 +583,7 @@ module button_cutouts()
     {
         // cutout for the button itself
         button_transform(params)
-        button_cutout();
+        button_cutout(params[6], params[7]);
 
         // Bottom access cutout for the button
         shadow_hull()
