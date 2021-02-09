@@ -374,8 +374,16 @@ module body_right_cut()
 {
     radius = 150;
     rotate([0, -45, 40])
-    translate([ball_diameter / 4 + -radius, 0, 0])
-    sphere(r=radius);
+    difference()
+    {
+        translate([ball_diameter / 4 + -radius, 0, 0])
+        sphere(r=radius);
+
+        rotate([0, 90, 0])
+        cylinder(d=ball_diameter, h=ball_diameter);
+
+    }
+
 
 }
 
