@@ -24,6 +24,8 @@ bearing_spacing=[
 ];
 
 sensor_angle=60;
+// Having the sensors directly face-on to the ball doesn't work.
+// I suspect this is due to specular reflection washing out the surface details.
 sensor_skew_angle=10;
 
 // Sensor params are:
@@ -56,8 +58,15 @@ bottom = -(recess_radius + bottom_clearance);
 // 6 - front overhang (should match up with parametrs in microswitch_cherry_mx.scad)
 // 7 - rear overhang (same)
 button_params = [
-    [100, 28, 12, -3, 11, -4 - 90, 5, 15],
-    [-60, 38, 11, 20, -5, 5 + 90, 5, 5]
+    // main button
+    [100, 28, 12, -3, 11, -3 - 90, 5, 20],
+    // previous second button
+    // [-60, 38, 11, 20, -5, 5 + 90, 5, 5]
+    // second button
+    [-30, 34, 14, 40, 33, -9 + 90, 5, 20],
+    // third (middle) button
+    // disabled because it encroaches on a sensor
+    // [5, 20, 15, 25, 30, 10 + 180, 5, 5]
 ];
 
 module button_transform(params)
@@ -65,8 +74,8 @@ module button_transform(params)
     rotate([0, 0, params[0]])
     rotate([-params[1], 0, 0])
     translate([0, ball_radius + params[2], 0])
-    rotate([0, params[4], 0])
     rotate(-[params[3], 0, 0])
+    rotate([0, params[4], 0])
     rotate([0, 0, params[5]]) 
     children();
 }
@@ -77,6 +86,12 @@ module ccube(x, y, z)
 {
     translate([0, 0, z/2])
     cube(center=true, [x,y, abs(z)]);
+}
+
+module rcube(x, y, z, r)
+{
+    linear_extrude(height = abs(z))
+    rrect(x, y, r);
 }
 
 module rrect(x, y, r)
@@ -105,7 +120,8 @@ module shadow_hull()
 
 module ball()
 {
-    color("red") sphere(d=ball_diameter);
+    color("red")
+    sphere(d=ball_diameter);
 }
 
 module ball_cutout()
@@ -159,21 +175,21 @@ module button_cutout(front_overhang = 0, rear_overhang = 0)
             ccube(14, 14, 20);
         }
 
-        // 2mm cut around the hole for seating/overhang
-        ccube(20, 20, 40);
+        // 3mm cut around the hole for seating/overhang
+        rcube(20, 20, 40, 1);
 
         // Front and rear overhangs are intended to match up with the overhang parameters in 
         // microswitch-cherry-mx.scad.
         if (front_overhang > 0)
         {
-            translate([-10, 10, 0])
-            cube([20, front_overhang + 5, 6]);
+            translate([-7.5, 7, 0])
+            cube([15, front_overhang + 3, 6]);
         }
 
         if (rear_overhang > 0)
         {
-            translate([-10, -10 -rear_overhang, 0])
-            cube([20, rear_overhang, 6]);
+            translate([-7.5, -7 - (1 + rear_overhang), 0])
+            cube([15, 1 + rear_overhang, 6]);
         }
     }
 }
@@ -326,13 +342,13 @@ module body_tail_cut()
 
 module body_left_cut()
 {
-    difference()
+    union()
     {
         rotate([-10, 0, 0])
         translate ([3- ball_radius, 0, bottom])
         {
             radius = 120;
-            downward_curve = 30;
+            downward_curve = 40;
             ledge_height = 20;
             // translate([radius, 0, -radius])
             // cylinder(r=radius, h=radius * 2);
@@ -379,7 +395,7 @@ module body_left_cut()
                 square(300, 300);
             }
         }  
-        // // Don't cut anything aft of tail_y_boundary with this shape.
+        // Don't cut anything aft of tail_y_boundary with this shape.
         // translate([-100, -200 + tail_y_boundary, -100])
         // cube([200, 200, 200]);
     }
@@ -387,51 +403,118 @@ module body_left_cut()
 
 module body_right_cut()
 {
-    radius = 150;
-    rotate([0, -45, 40])
+    radius = 100;
+    y_rotation = -45;
+    z_rotation = 40;
+
     difference()
     {
+        scale([0.8, 1, 0.6])
+        rotate([0, y_rotation, z_rotation])
         translate([ball_diameter / 4 + -radius, 0, 0])
         sphere(r=radius);
 
+        // clearance cut for ball removal
+        // The angle here isn't critical, it just needs to not look funny.
+        rotate([0, y_rotation - 5 , z_rotation  - 10])
         rotate([0, 90, 0])
         cylinder(d=ball_diameter, h=ball_diameter);
 
     }
-
-
 }
 
 module body_back_cut()
 {
-    translate([0, 0, bottom])
-    rotate_extrude(angle=360)
-    intersection()
+    downward_curve = 32;
+    // rotate([0, 0, 20])
+    translate([-25, -10, bottom])
+    scale([1, 0.8, 1])
+    union()
     {
-        translate([0, 0, 0])
+        rotate([-downward_curve, 0, 0])
+        rotate_extrude(angle=360)
+        intersection()
         {
-            // fillet
-            fillet_amount = 40;
-            offset(-fillet_amount) 
-            offset(fillet_amount)
-            union()
+            translate([0, 0, 0])
             {
-                rotate([0, 0, -4])
-                square([200, 15]);
-                // square([50, 25]);
-                translate([0, 5])
-                circle(r=60);
-            }
+                fillet_amount = 65;
+                offset(-fillet_amount) 
+                offset(fillet_amount)
+                rotate([0, 0, -downward_curve])
+                union()
+                {
+                    // the center swell
+                    translate([0, -5.5])
+                    scale([0.8, 0.6])
+                    circle(r=100);
+                    
+                    // the horizontal base
+                    // rotate([0, 0, -4])
+                    square([200, 15]);
+                    // square([50, 25]);
+                }
 
-            // offset(fillet_amount)
-            // offset(-fillet_amount) 
-            // square([50, 50]);
+                // offset(fillet_amount)
+                // offset(-fillet_amount) 
+                // square([50, 50]);
+            }
+            // Clip to positive X
+            translate([0, -150])
+            square(300, 300);
         }
-        // Clip to positive X
-        translate([0, 0])
-        square(300, 300);
+
+        // Don't clip anything forward of the rotation point with this shape.
+        translate([-150, 0, -150])
+        cube([300, 300, 300]);
+
+        // nor left of the rotation point
+        // translate([-300, -150, -150])
+        // cube([300, 300, 300]);
     }
 
+}
+
+module body_outline()
+{
+    right_radius = right_cut_radius - 13;
+    left_radius = 176;
+    // offset(-100) offset(100) 
+    union()
+    {
+        // offset(30) offset(-30) 
+        intersection()
+        {
+            // match the right cut curve at the bottom surface
+            // rotate([0, 0, right_cut_z_rotation])
+            // translate([ball_diameter / 4 + -right_cut_radius + 39, 0])
+            // circle(r=right_radius);
+
+            // match the left cut curve. This requires some tweaking.
+            // translate([155 + 3 - ball_radius, 3])
+            // circle(r=left_radius);
+        }
+
+        // Make a bit of a tail
+        // translate([15, 50 -left_radius])
+        // circle(r = 20);
+
+// offset(-50) offset(50) 
+ hull() {
+        // main button
+        translate([-30, -8])
+        circle(r = 30);
+        // front end
+        translate([-15, 55])
+        circle(r = 5);
+        // inside curve on left
+        translate([-20, -70])
+        circle(r = 10);
+}
+        // tail tip
+        translate([0, -150])
+        circle(r = 15);
+
+    }
 }
 
 module body()
@@ -450,7 +533,7 @@ module body()
                 // left cut
                 body_left_cut();
                 // tail cut
-                body_tail_cut();
+                // body_tail_cut();
             }
                     
             // right cut
@@ -519,14 +602,13 @@ module wire_cutouts()
     // rotate([0, 0, 45])
     // rrect(wire_channel_size, wire_channel_size, 0);
 
-    rotate([0, 0, 55])
-    translate([0, ball_radius + 15, bottom - 1])
-    sphere(r=20);
-    // cylinder(r=15, h=15);
+    // rotate([0, 0, 55])
+    // translate([0, ball_radius + 15, bottom - 1])
+    // sphere(r=20);
 
-    rotate([0, 0, 35])
-    translate([0, ball_radius + 40, bottom - 1])
-    sphere(r=20);
+    // rotate([0, 0, 35])
+    // translate([0, ball_radius + 40, bottom - 1])
+    // sphere(r=20);
 
     // rotate([0, 0, 57])
     // translate([0, 27, bottom])
