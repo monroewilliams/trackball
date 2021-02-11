@@ -26,7 +26,7 @@ This code may be used for any purpose.  If you post or release something derived
 
 # BUILD #
 
-I'm building this with PlatformIO/VSCode. The "trackball" subdirectory should open directly with VSCode.
+I'm building this with PlatformIO/VSCode. The root of the repository should open directly with VSCode.
 
 I do my work on Mac OS X, so I don't know if there will be any issues using it on Windows or Linux.
 
