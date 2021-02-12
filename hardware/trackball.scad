@@ -103,7 +103,7 @@ module rrect(x, y, r)
 {
     translate([-x/2, -y/2, 0])
     translate([r, r, 0])
-    offset(r, $rs=30)
+    offset(r, $fs = r/2)
     square([x - (r * 2), y - (r * 2)]);
 }
 
@@ -183,8 +183,16 @@ module button_cutout(front_overhang = 0, rear_overhang = 0)
             ccube(14, 14, 20);
         }
 
-        // 3mm cut around the hole for seating/overhang
-        rcube(20, 20, 40, 1);
+        if ((front_overhang == 0) && (rear_overhang == 0))
+        {
+            // 3mm cut around the hole for seating/overhang and keycap
+            rcube(20, 20, 40, 1);
+        }
+        else
+        {
+            // 1mm cut around the hole for seating/overhang
+            ccube(16, 16, 40);
+        }
 
         // Front and rear overhangs are intended to match up with the overhang parameters in 
         // microswitch-cherry-mx.scad.
@@ -267,7 +275,7 @@ module sensor_cutout()
             // screwdriver access
             translate([i, 0,-104])
             color("white", 0.5)
-            cylinder(d=5, h=100);
+            cylinder(d=5, h=100, $fn=16);
         }
         
         // Leave room for the lens-side soldered ends of the wires.
@@ -286,17 +294,29 @@ module sensor_access_base()
     translate([0,0,-(lens_thickness + z)])
     {
         // The board itself
-        color("green", 0.5) cylinder(d=32, h=z, $fa = 5);
+        cylinder(d=32, h=z, $fa = 5);
         
         // Hemisphere for clearance
         difference()
         {
-            color("white", 0.25)
             sphere(d=32, $fa = 5);
             
             translate([0,0,1])
             cylinder(d=32, h=17, $fa=5);
         }
+    }
+}
+
+module sensor_shell()
+{
+    // A solid which completely encloses the sensor cutout/access cutout,
+    // so it can be protected from the top.
+
+    // This is essentially the sphere defined by sensor_access_base, expanded by 2mm.
+    z = sensor_board_thickness + sensor_board_clearance;
+    translate([0,0,-(lens_thickness + z)])
+    {
+        sphere(d=36, $fa = 5);
     }
 }
 
@@ -348,47 +368,10 @@ module breadboard_cutout()
         ccube(5.0, 5.0, 6.5);
 
         // USB Cable clearance
-        intersection()
-        {
-            intersection()
-            {
-                ccube(100, 100, 100);
-                scale([1, 1, 0.9])
-                rotate([90, 0, 0])
-                cylinder(d=main_width, h=50);
-            }
-        }
+        translate([0, 0, 4])
+        rotate([100, 0, 0])
+        cylinder(d=main_width, h=50);
 
-    }
-}
-
-tail_y_boundary = -80;
-
-module body_tail_cut()
-{
-    translate([0, 0, bottom])
-    linear_extrude(height=-bottom, scale=[1.4,1])
-    {  
-        intersection()
-        {
-            offset(-50) offset(50) 
-            union()
-            {
-                // match the left cut curve. This requires some tweaking.
-                cut_radius = 176;
-                // color("blue", 0.25)
-                translate([155 + 3 - ball_radius, 3])
-                circle(r=cut_radius);
-
-                // Make a bit of a tail
-                translate([0, 27 - cut_radius])
-                circle(r = 20);
-            }
-            // Don't cut anything forward of tail_y_boundary with this shape.
-            translate([-100, -200 + tail_y_boundary])
-            square([200, 200]);
-
-        }
     }
 }
 
@@ -453,76 +436,76 @@ module body_left_cut()
     }
 }
 
-module body_right_cut()
+module body_right_front_cut()
 {
-    radius = 100;
-    y_rotation = -45;
-    z_rotation = 40;
-
-    difference()
+    scale([0.89, 0.9, 0.815])
+    rotate([0, 0, 90])
+    rotate_extrude(angle=-180)
+    intersection()
     {
-        scale([0.8, 1, 0.85])
-        rotate([0, y_rotation, z_rotation])
-        translate([ball_diameter / 4 + -radius, 0, 0])
-        sphere(r=radius);
+        // scale([0.8, 0.6])
+        circle(r=100);
+
+        // Clip to positive X
+        translate([0, 0])
+        square(300, 300);
     }
 }
 
-module body_back_cut()
+module body_right_rear_cut()
 {
-    // These are the parameters I'm tweaking to match up the right side of the back cut
-    // with the back part of the right cut, in both position and angle.
-    downward_curve = 22;
-    swell_height = -19.8;
-    swell_left_translation = 32;
-    swell_back_translation = 25;
-
-    // rotate([0, 0, 20])
-    translate([-swell_left_translation, -swell_back_translation, bottom])
-    scale([1, 0.8, 1])
-    union()
+    rotation_x_offset = 28;
+    scale([1.0, 0.7, 1.0])
+    translate([rotation_x_offset, 0, 0])
+    rotate_extrude(angle=-180)
+    intersection()
     {
-        rotate([-downward_curve, 0, 0])
-        rotate_extrude(angle=360)
-        intersection()
+        // scale([0.8, 0.6])
+        // circle(r=100);
+        fillet_amount = 70;
+        offset(-fillet_amount) 
+        offset(fillet_amount)
+        translate([-rotation_x_offset, 0, 0])
+        union()
         {
-            translate([0, 0, 0])
-            {
-                fillet_amount = 60;
-                offset(-fillet_amount) 
-                offset(fillet_amount)
-                rotate([0, 0, -downward_curve])
-                union()
-                {
-                    // the center swell
-                    translate([0, swell_height])
-                    scale([0.8, 0.85])
-                    circle(r=100);
-                    
-                    // the horizontal base
-                    rotate([0, 0, -6])
-                    square([200, 15]);
-                    // square([50, 25]);
-                }
-
-                // offset(fillet_amount)
-                // offset(-fillet_amount) 
-                // square([50, 50]);
-            }
-            // Clip to positive X
-            translate([0, -150])
-            square(300, 300);
+            // This matches up with the final X/Z scale of the right front cut.
+            scale([0.89, 0.815])
+            circle(r=100);
+            
+            // the horizontal base
+            rotate([0, 0, -5.1])
+            square([200, 25]);
+            // square([50, 25]);
         }
 
-        // Don't clip anything forward of the rotation point with this shape.
-        translate([-150, 0, -150])
-        cube([300, 300, 300]);
-
-        // nor left of the rotation point
-        // translate([-300, -150, -150])
-        // cube([300, 300, 300]);
+        // Clip to positive X
+        translate([0, 0])
+        square(300, 300);
     }
+}
 
+module body_right_cut()
+{
+    y_translation_angle = -45;
+    z_translation_angle = 40;
+    translation_amount = 80 - ball_diameter / 4;
+
+    rotate([0, -y_translation_angle, 0])
+    rotate([0, 0, -z_translation_angle])
+    translate([0, 0, -translation_amount])
+    rotate([0, 0, z_translation_angle])
+    rotate([0, y_translation_angle, 0])
+    translate([0, -30, 0])
+    intersection()
+    {
+        body_right_front_cut();
+        union()
+        {
+            translate([-100, 0, -100])
+            cube([200, 200, 200]);
+            body_right_rear_cut();
+        }
+    }
 }
 
 module body_button_supports()
@@ -532,51 +515,9 @@ module body_button_supports()
         shadow_hull()
         button_transform(i)
         translate([0, 0, -10])
-        ccube(18, 18, 11);
+        rcube(20, 20, 10, 3);
     }
 
-}
-module body_outline()
-{
-    right_radius = right_cut_radius - 13;
-    left_radius = 176;
-    // offset(-100) offset(100) 
-    union()
-    {
-        // offset(30) offset(-30) 
-        intersection()
-        {
-            // match the right cut curve at the bottom surface
-            // rotate([0, 0, right_cut_z_rotation])
-            // translate([ball_diameter / 4 + -right_cut_radius + 39, 0])
-            // circle(r=right_radius);
-
-            // match the left cut curve. This requires some tweaking.
-            // translate([155 + 3 - ball_radius, 3])
-            // circle(r=left_radius);
-        }
-
-        // Make a bit of a tail
-        // translate([15, 50 -left_radius])
-        // circle(r = 20);
-
-// offset(-50) offset(50) 
- hull() {
-        // main button
-        translate([-30, -8])
-        circle(r = 30);
-        // front end
-        translate([-15, 55])
-        circle(r = 5);
-        // inside curve on left
-        translate([-20, -70])
-        circle(r = 10);
-}
-        // tail tip
-        translate([0, -150])
-        circle(r = 15);
-
-    }
 }
 
 module body()
@@ -593,17 +534,14 @@ module body()
             {
                 // left cut
                 body_left_cut();
-                // tail cut
-                // body_tail_cut();
                         
                 // right cut
                 body_right_cut();
-
-                // back cut
-                body_back_cut();
             }        
  
             body_button_supports();
+
+            sensor_shells();
         }
 
     }
@@ -658,57 +596,92 @@ module body_minimal()
     }
 }
 
+wire_channel_size = 10;
+wire_channel_primary_radius = 25;
+
+module wire_cutout_profile()
+{
+    rotate([0, 0, 45])
+    rrect(wire_channel_size, wire_channel_size, 2);
+    // circle(d=wire_channel_size, $fn=30);
+}
+
+module wire_cutout_straight_section(h)
+{
+    translate([0, 0, -0.01])
+    union()
+    {
+        linear_extrude(height = h)
+        wire_cutout_profile();
+        translate([0, 0, h - 0.01])
+        linear_extrude(height = 8, scale=2)
+        wire_cutout_profile();
+    }
+}
+
 module wire_cutouts()
 {
-    // main circularchannel around the ball
-    wire_channel_size = 10;
-    primary_radius = 25;
     translate([0, 0, bottom])
-    rotate_extrude()
-    translate([primary_radius, 0, 0])
-    // circle(d=wire_channel_size, $fn=30);
-    rotate([0, 0, 45])
-    rrect(wire_channel_size, wire_channel_size, 2);
+    union()
+    {
+        if(false)
+        {
+            // segment just to the front sensor
+            // rotate([0, 0, 180 + 10])
+            // translate([wire_channel_primary_radius, 0, 0])
+            // rotate([90, 0, 0])
+            // translate([0, 0, -0.01])
+            // linear_extrude(20)
+            // wire_cutout_profile();
 
-    // Access out the front for the USB cable
-    secondary_radius = 100;
-    rotate([0, 0, 35])
-    translate([primary_radius - secondary_radius, 0, bottom])
-    rotate_extrude(angle=45)
-    translate([secondary_radius, 0, 0])
-    // circle(d=wire_channel_size, $fn=30);
-    rotate([0, 0, 45])
-    rrect(wire_channel_size, wire_channel_size, 2);
+            // rotate([0, 0, 180 + 10])
+            // rotate_extrude(angle=25)
+            // translate([wire_channel_primary_radius, 0, 0])
+            // wire_cutout_profile();
+        }
+        else
+        {
+            // most of a full circle
+            rotate([0, 0, 180 - 45])
+            rotate_extrude(angle=75)
+            translate([wire_channel_primary_radius, 0, 0])
+            wire_cutout_profile();
+        }
 
-    // Room for the breadboard under the handrest
-    // first placement option
-    // translate([-6, -60, bottom])
-    // rotate([0, 0, 29])
-    // second placement option
-    translate([0, -50, bottom])
-    rotate([0, 0, -90])
-    breadboard_cutout();
-    // rotate([0, 0, 55])
-    // translate([0, ball_radius + 15, bottom - 1])
-    // sphere(r=20);
+        rotate([0, 0, 180 + 30])
+        translate([wire_channel_primary_radius, 0, 0])
+        rotate([-90, 0, 0])
+        wire_cutout_straight_section(14);
 
-    // rotate([0, 0, 35])
-    // translate([0, ball_radius + 40, bottom - 1])
-    // sphere(r=20);
+        rotate([0, 0, -30])
+        translate([wire_channel_primary_radius, 0, 0])
+        rotate([90, 0, 0])
+        wire_cutout_straight_section(14);
 
-    // rotate([0, 0, 57])
-    // translate([0, 27, bottom])
-    // rotate([-90, 0, 0])
-    // linear_extrude(height=60)
-    // rotate([0, 0, 45])
-    // rrect(wire_channel_size, wire_channel_size, 0);
+        rotate([0, 0, -35])
+        rotate_extrude(angle=63)
+        translate([wire_channel_primary_radius, 0, 0])
+        wire_cutout_profile();
 
-    // rotate([0, 0, -95])
-    // translate([-20, 27, bottom])
-    // rotate([0, -90, 0])
-    // linear_extrude(height=60)
-    // rotate([0, 0, 45])
-    // rrect(wire_channel_size, wire_channel_size, 0);
+        // Access out the front for the USB cable.
+        // Match the radius of the outer edge.
+        secondary_radius = 70;
+        rotate([0, 0, 27])
+        translate([wire_channel_primary_radius - secondary_radius, 0, 0])
+        rotate_extrude(angle=55)
+        translate([secondary_radius, 0, 0])
+        wire_cutout_profile();
+
+        // Trim the front of the body so it's not pointy for no reason
+        rotate([0, 0, 45])
+        translate([0, 100, -1])
+        ccube(100, 100, 100);
+
+        // Room for the breadboard under the handrest
+        translate([-1, -50, 0])
+        rotate([0, 0, -90])
+        breadboard_cutout();
+    }
 
 }
 
@@ -730,9 +703,9 @@ module sensor_cutouts()
             sensor_transform(params)
             sensor_cutout();
             
-            // Clip the cutouts to the top of the base ring.
-            translate([0, 0, body_height + bottom])
-            ccube(100, 100, -100);
+            // // Clip the cutouts to the top of the base ring.
+            // translate([0, 0, body_height + bottom])
+            // ccube(100, 100, -100);
         }
     }
 }
@@ -747,6 +720,19 @@ module sensor_access_cutouts()
             shadow_hull()
             sensor_transform(params)
             sensor_access_base();
+        }
+    }
+}
+
+module sensor_shells()
+{
+    for(params = sensor_params )
+    {
+        difference()
+        {
+            shadow_hull()
+            sensor_transform(params)
+            sensor_shell();
         }
     }
 }

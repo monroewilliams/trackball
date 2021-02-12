@@ -20,69 +20,79 @@ ball_radius=ball_diameter/2;
 // This is the contents of the body() module, reproduced here to make commenting out parts easier.
 module test_body()
 {
-    difference()
+    // color("white", 0.75)
+    intersection()
     {
-        // color("white", 0.75)
-        intersection()
+        // Clip to above bottom surface
+        translate ([0, 0, bottom])
+        ccube(400, 400, 400);
+        union()
         {
-            // Clip to above bottom surface
-            // render()
-            translate ([0, 0, bottom])
-            ccube(400, 400, 400);
-
-            union()
+            intersection()
             {
                 // left cut
-                // render(4)
                 body_left_cut();
                 // tail cut
-                // render(4)
                 // body_tail_cut();
-            }
-                    
-            // right cut
-            // render(4)
-            body_right_cut();
+                        
+                // right cut
+                body_right_cut();
 
-            // back cut
-            // render(4)
-            body_back_cut();
-        
+            }        
+ 
+            // body_button_supports();
+
+            // sensor_shells();
         }
-    }
 
+    }
+}
+
+
+// For when you're just working on the underside cutouts...
+module body_standin()
+{
+    translate([0, 0, bottom])
+    ccube(80, 180, 50);
 }
 
 // This is the full assembly with all the cutouts. I find it useful when I just want to visualize
 // certain of the cutouts on the full body.
-// Uncommenting the render() calls on parts you're not actively modifying sometimes helps interactive performance.
 
 if (true)
 union()
 {
     difference()
     {
-        // test_body();
-
-        // render(4) 
+        // alternates to the standard body
         body();
-        // render(4) 
         // body_minimal();
-        // render(6) 
-        ball_cutout();
-        // render() 
-        bearing_cutouts();
-        // render(4) 
-        sensor_cutouts();
-        // render(6) 
-        button_cutouts();
-        // render() 
+        // body_standin();
+
+        // body();
+        // ball_cutout();
+        // bearing_cutouts();
+        // sensor_cutouts();
+        // sensor_access_cutouts();
+        // button_cutouts();
         wire_cutouts();
     }
 
-    // ball();
+    ball();
 }
 
+
+// difference()
+// {
+//     sensor_shells();
+//     sensor_cutouts();
+//     sensor_access_cutouts();
+// }
+
+
+// color("blue", 0.25) 
+// body();
+// test_body();
 
 // Rendering semi-transparent cut objects can be useful while tweaking.
 // This only seems to work if they come _after_ non-transperent objects (othewise the colors don't take)
