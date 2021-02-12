@@ -247,7 +247,7 @@ module top()
 // Assemble the pieces
 difference()
 {
-    union();
+    union()
     {
         body();
     }
