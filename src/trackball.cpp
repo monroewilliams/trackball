@@ -4,7 +4,7 @@
 #include "trackball.h"
 #include "adns.h"
 
-#define USE_SCROLL_RESOLUTION_MULTIPLIER 1
+#define USE_SCROLL_RESOLUTION_MULTIPLIER 0
 
 // HID report descriptor using TinyUSB's template
 // Single Report (no ID) descriptor
@@ -121,8 +121,8 @@ const int buttonPins[] = { PIN_BUTTON_LEFT, PIN_BUTTON_RIGHT,  PIN_BUTTON_MIDDLE
 const int buttonCount = sizeof(buttonPins) / sizeof(buttonPins[0]);
 char buttons;
 
-const int scroll_tick = 128;
 int scroll_accum = 0;
+const int scroll_tick = 64;
 
 void setup() 
 {
