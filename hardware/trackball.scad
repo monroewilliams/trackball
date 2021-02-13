@@ -64,14 +64,13 @@ button_params = [
     // second button
     // first model version:
     // [-60, 30, 13, 24, 0, 90, 5, 20]
-    [-60, 33, 13, 30, 0, 90, 5, 20]
+    [-60, 33, 13, 30, 0, 0, 0, 0],
     // other attempts:
     // [-60, 38, 12, 30, 0, 0 + 90, 5,10]
     // [-30, 34, 14, 40, 33, -9 + 90, 5, 20],
    
     // third (middle) button
-    // disabled because it encroaches on a sensor
-    // [5, 20, 15, 25, 30, 10 + 180, 5, 5]
+    [-10, 19, 13, 30, 30, 12, 0, 0]
 ];
 
 module button_transform(params)
