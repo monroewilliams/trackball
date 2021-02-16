@@ -499,7 +499,7 @@ module body_right_rear_cut()
     }
 }
 
-module body_right_cut()
+module body_right_cut_translation()
 {
     y_translation_angle = -45;
     z_translation_angle = 40;
@@ -511,9 +511,23 @@ module body_right_cut()
     rotate([0, 0, z_translation_angle])
     rotate([0, y_translation_angle, 0])
     translate([0, -30, 0])
+    children();
+}
+
+module body_right_cut()
+{
+    body_right_cut_translation()
     intersection()
     {
-        body_right_front_cut();
+        union()
+        {
+            body_right_front_cut();
+
+            // Don't cut left of the center point
+            translate([-200, 0, 0])
+            cube([200, 200, 200]);
+        }
+        
         union()
         {
             translate([-100, 0, -100])
