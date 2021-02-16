@@ -331,12 +331,18 @@ void loop()
         delta.z = 0;
       }
 
-      if ((delta.x != 0) || (delta.y != 0) || (delta.z != 0))
+      if (scroll != 0)
       {
-        if (delta.z != 0)
-        {
           click();
-        }
+      }
+      if ((delta.x != 0) || (delta.y != 0) || 
+#if USE_SCROLL_RESOLUTION_MULTIPLIER
+        (delta.z != 0)
+#else
+        (scroll != 0)
+#endif
+      )
+      {
         sendReport = true;
       }
     }
