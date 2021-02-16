@@ -141,7 +141,7 @@ module ball_cutout()
         // roughly match the angle of the right cut
         rotate([0, -45 , 40])
         rotate([0, 90, 0])
-        cylinder(d=ball_diameter, h=ball_diameter);
+        cylinder(d=ball_diameter + (ball_clearance * 2), h=ball_diameter);
 
 
         // bottom hole
