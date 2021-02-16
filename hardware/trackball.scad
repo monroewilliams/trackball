@@ -371,15 +371,19 @@ module breadboard_cutout()
             intersection()
             {
                 translate([-5, 0, 12])
-                sphere(r=18);
+                sphere(r=16);
                 ccube(main_width, main_length, 100);
             }
         }
 
         // connection tabs
+        translate([0, main_length / 2, 0])
+        ccube(5.0, 5.0, 6.5);
         translate([0, -main_length / 2, 0])
         ccube(5.0, 5.0, 6.5);
         translate([main_width / 2, 0, 0])
+        ccube(5.0, 5.0, 6.5);
+        translate([-main_width / 2, 0, 0])
         ccube(5.0, 5.0, 6.5);
 
         // USB Cable clearance
@@ -431,9 +435,11 @@ module body_left_cut()
                         translate([-radius, -ledge_height])
                         translate([0, -100])
                         square([radius + 25, 100 + ledge_height]);
-                        // square([100, 3]);
-                        // translate([0, -bottom])
-                        // circle(d=60);
+
+                        // Make outside edge vertical
+                        translate([0, -107])
+                        square([radius + 25, 100 + ledge_height]);
+
                     }
 
                     // offset(fillet_amount)
@@ -467,35 +473,51 @@ module body_right_front_cut()
     }
 }
 
-module body_right_rear_cut()
+module body_right_rear_cut_template(params)
 {
-    rotation_x_offset = 28;
-    scale([1.0, 0.7, 1.0])
-    translate([rotation_x_offset, 0, 0])
-    rotate_extrude(angle=-180)
-    intersection()
+    // Match the front right cut at the intersection point at the z=0 plane
+    rotate([-params[2], 0, 0])
+    scale([1, 1, 1.0 / params[3]])
+    rotate([-90, 0, 0])
     {
-        // scale([0.8, 0.6])
-        // circle(r=100);
-        fillet_amount = 70;
-        offset(-fillet_amount) 
-        offset(fillet_amount)
-        translate([-rotation_x_offset, 0, 0])
-        union()
-        {
-            // This matches up with the final X/Z scale of the right front cut.
-            scale([0.89, 0.815])
-            circle(r=100);
-            
-            // the horizontal base
-            rotate([0, 0, -5.1])
-            square([200, 25]);
-            // square([50, 25]);
-        }
+        translate([-params[0], -params[1], 0])
+        body_right_front_cut();
+    }
 
-        // Clip to positive X
-        translate([0, 0])
-        square(300, 300);
+}
+
+module body_right_rear_cut(params)
+{
+    translate([params[0], params[1], 0])
+    scale([1.0, params[3], 1.0])
+    rotate([-params[2], 0, 0])
+    union()
+    {
+        rotate_extrude(angle=-180)
+        intersection()
+        {  
+            offset(-params[6]) 
+            offset(params[6])
+            union()
+            {
+                // Match the front right cut at the intersection point
+                projection(cut=true)
+                body_right_rear_cut_template(params);
+
+                // add the horizontal base
+                rotate([0, 0, -(params[2] + params[4])])
+                translate([0, -100 + params[5]])
+                square([250, 100]);
+            }
+
+            // Clip to positive X
+            translate([0, -150])
+            square(300, 300);
+        }
+        
+        // Don't clip forward of this part
+        translate([-200, 0, -200])
+        cube([400, 400, 400]);
     }
 }
 
@@ -514,6 +536,19 @@ module body_right_cut_translation()
     children();
 }
 
+// right rear shape params are:
+// 0 - x offset
+// 1 - y offset
+// 2 - saddle rotation angle
+// 3 - y scaling
+// 4 - horizontal component angle (added to saddle angle)
+// 5 - horizontal component height
+// 6 - fillet amount
+// right_rear_params = [20, 0, 35, 0.6, 5.0, 26, 60];
+// right_rear_params = [20, 0, 27, 0.7, 7.5, 30, 90];
+right_rear_params = [21, 2, 25, 0.7, 8, 30, 90];
+// Settings roughly equivalent to previous:
+// right_rear_params = [28, 0, 0, 0.7, 5.1, 22.5, 70];
 module body_right_cut()
 {
     body_right_cut_translation()
@@ -526,14 +561,16 @@ module body_right_cut()
             // Don't cut left of the center point
             translate([-200, 0, 0])
             cube([200, 200, 200]);
+
+            // and don't cut off the tail tip
+            // translate([-100, -200 - 50, -100])
+            // cube([200, 200, 200]);
         }
-        
         union()
         {
-            translate([-100, 0, -100])
-            cube([200, 200, 200]);
-            body_right_rear_cut();
+            body_right_rear_cut(right_rear_params);
         }
+
     }
 }
 
@@ -707,7 +744,7 @@ module wire_cutouts()
         ccube(100, 100, 100);
 
         // Room for the breadboard under the handrest
-        translate([-1, -50, 0])
+        translate([-5, -50, 0])
         rotate([0, 0, -90])
         breadboard_cutout();
     }
