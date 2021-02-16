@@ -106,6 +106,22 @@ module rrect(x, y, r)
     square([x - (r * 2), y - (r * 2)]);
 }
 
+module prender(convexity = 1)
+{
+    // Render only in preview mode.
+    // Using unconditional render() calls seems to cause my final render to fail
+
+    if ($preview)
+    {
+        render(convexity)
+        children();
+    }
+    else
+    {
+        children();
+    }
+}
+
 module shadow_hull()
 {
     // This creates an object which is a hull of the object itself and its shadow on the x/y plane.
