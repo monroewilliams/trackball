@@ -353,45 +353,52 @@ module sensorpod()
     }
 }
 
+breadboard_size = [46.5, 34.75, 9.5];
+breadboard_offset = [-5, -50];
+
 module breadboard_cutout()
 {
-    main_width = 34.75;
-    main_length = 46.5;
-    main_height = 9.5;
-    clearance = 0;
-
     union()
     {
-        hull()
-        {
-            // main body
-            ccube(main_width, main_length, main_height + clearance);
+        // main body
+        ccube(breadboard_size[0], breadboard_size[1], breadboard_size[2]);
 
-            // top of clearance hull
-            intersection()
-            {
-                translate([-5, 0, 12])
-                sphere(r=16);
-                ccube(main_width, main_length, 100);
-            }
+        // clearance cutout
+        intersection()
+        {
+            // ccube(breadboard_size[0], breadboard_size[1], 200);
+            linear_extrude(height=80, scale=1.0)
+            square(center=true, [breadboard_size[0], breadboard_size[1]]);
+
+            // Tweak the location of the top of the cutout to make it a reasonable shell
+            // Note that any adjustment to the body shape may require adjusting this.
+            translate([2.0, 2.0, -4.0])
+            translate([-breadboard_offset[0], -breadboard_offset[1], -bottom])
+            body();
+
         }
 
         // connection tabs
-        translate([0, main_length / 2, 0])
+        translate([0, breadboard_size[1] / 2, 0])
         ccube(5.0, 5.0, 6.5);
-        translate([0, -main_length / 2, 0])
+        translate([0, -breadboard_size[1] / 2, 0])
         ccube(5.0, 5.0, 6.5);
-        translate([main_width / 2, 0, 0])
+        translate([breadboard_size[0] / 2, 0, 0])
         ccube(5.0, 5.0, 6.5);
-        translate([-main_width / 2, 0, 0])
+        translate([-breadboard_size[0] / 2, 0, 0])
         ccube(5.0, 5.0, 6.5);
 
         // USB Cable clearance
         translate([0, 0, 4])
-        rotate([100, 0, 0])
-        cylinder(d=main_width, h=50);
+        rotate([0, -100, 0])
+        cylinder(d=breadboard_size[1], h=50);
 
     }
+}
+
+module breadboard_clearance()
+{
+
 }
 
 module body_left_cut()
@@ -679,9 +686,10 @@ module wire_cutout_straight_section(h)
     {
         linear_extrude(height = h)
         wire_cutout_profile();
-        translate([0, 0, h - 0.01])
-        linear_extrude(height = 8, scale=2)
-        wire_cutout_profile();
+        translate([0, 0, h])
+        sphere(r=wire_channel_size * 1.25);
+        // linear_extrude(height = 8, scale=2)
+        // wire_cutout_profile();
     }
 }
 
@@ -717,12 +725,12 @@ module wire_cutouts()
         rotate([0, 0, 180 + 30])
         translate([wire_channel_primary_radius, 0, 0])
         rotate([-90, 0, 0])
-        wire_cutout_straight_section(14);
+        wire_cutout_straight_section(20);
 
         rotate([0, 0, -30])
         translate([wire_channel_primary_radius, 0, 0])
         rotate([90, 0, 0])
-        wire_cutout_straight_section(14);
+        wire_cutout_straight_section(20);
 
         rotate([0, 0, -35])
         rotate_extrude(angle=63)
@@ -744,8 +752,7 @@ module wire_cutouts()
         ccube(100, 100, 100);
 
         // Room for the breadboard under the handrest
-        translate([-5, -50, 0])
-        rotate([0, 0, -90])
+        translate([breadboard_offset[0], breadboard_offset[1], 0])
         breadboard_cutout();
     }
 
