@@ -129,7 +129,10 @@ char buttons;
 // sensors
 adns sensor_1;
 adns sensor_2;
-#define SENSOR_CPI 2400
+// Run the sensor at higher cpi than we report (this will help with more precise angle calculations)
+const int sensor_cpi = 8200;
+const int reported_cpi = 2400;
+const float sensor_cpi_multiplier = (float)sensor_cpi / (float)reported_cpi;
 
 // sensor location
 // azimuth = degrees clockwise from 12 o'clock (directly away from the user)
@@ -199,8 +202,8 @@ void setup()
   sensor_1.init(PIN_SENSOR_1_SELECT);
   sensor_2.init(PIN_SENSOR_2_SELECT);
   
-  sensor_1.set_cpi(SENSOR_CPI);
-  sensor_2.set_cpi(SENSOR_CPI);
+  sensor_1.set_cpi(sensor_cpi);
+  sensor_2.set_cpi(sensor_cpi);
   
   for(int i=0; i<buttonCount; i++)
   {
@@ -260,7 +263,7 @@ void loop()
 
     if (sensor_1.x != 0 || sensor_1.y != 0 || sensor_2.x != 0 || sensor_2.y != 0)
     {
-      // Something moved.
+      // The sensor reported movement.
 
       // DebugLog(F("1x = "));
       // DebugLog(sensor_1.x);
@@ -293,7 +296,9 @@ void loop()
         cumulative_motion.print();
         DebugLogln("");
 #endif
+
       }
+
 
       if(0)
       {
@@ -323,6 +328,11 @@ void loop()
         delta.z = -((sensor_1.y + sensor_2.y) / 2);
       }
 
+      // Scale all movement to the sensor reporting factor.
+      delta.x /= sensor_cpi_multiplier;
+      delta.y /= sensor_cpi_multiplier;
+      delta.z /= sensor_cpi_multiplier;
+      
       // Figure out if we should scroll
       if ((fabs(delta.z) > (fabs(delta.x) * 2)) && (fabs(delta.z) > (fabs(delta.y) * 2)))
       {
