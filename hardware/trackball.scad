@@ -123,7 +123,7 @@ module prender(convexity = 1)
     }
 }
 
-module shadow_hull()
+module shadow_hull(extra_height = 0)
 {
     // This creates an object which is a hull of the object itself and its shadow on the x/y plane.
     hull()
@@ -132,7 +132,7 @@ module shadow_hull()
         children();
 
         // the projection of the child object
-        translate([0, 0, bottom - 1]) 
+        translate([0, 0, bottom - 1 - extra_height]) 
         linear_extrude(height=1)
         projection()
         children();
