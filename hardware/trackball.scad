@@ -586,7 +586,7 @@ module body_button_supports()
 {
     for(i = button_params )
     {
-        shadow_hull()
+        shadow_hull(10)
         button_transform(i)
         translate([0, 0, -10])
         rcube(20, 20, 10, 3);
@@ -596,12 +596,20 @@ module body_button_supports()
 
 module body()
 {
-    // color("white", 0.75)
     intersection()
     {
         // Clip to above bottom surface
         translate ([0, 0, bottom])
         ccube(400, 400, 400);
+
+        body_unclipped();
+    }
+
+}
+module body_unclipped()
+{
+    difference()
+    {
         union()
         {
             intersection()
@@ -618,6 +626,73 @@ module body()
             sensor_shells();
         }
 
+        // Trim the front of the body so it's not pointy for no reason
+        rotate([0, 0, 45])
+        translate([0, 100, -100 + bottom])
+        ccube(100, 100, 200);
+    }
+}
+
+stud_diameter = 5;
+stud_height = 2;
+
+module bottom_stud()
+{
+    translate([0, 0, -1])
+    cylinder(d=stud_diameter, h = stud_height + 1, $fs=0.5);
+}
+
+module bottom_stud_hole()
+{
+    union()
+    {
+        bottom_stud();
+        translate([0, 0, stud_height])
+        sphere(d = stud_diameter, $fs=0.5);
+    }
+}
+
+stud_locations = [
+    // Clockwise when looking at the bottom of the body, starting from the tail.
+    [0, -80],
+    [25, -65],
+    [33, -20],
+    [-4, 23],
+    [-45, 15],
+    [-39, -27],
+];
+
+module bottom_cover(thickness)
+{
+    union()
+    {
+        intersection()
+        {
+            translate([0, 0, - bottom])
+            {
+                difference()
+                {
+                    body_unclipped();
+                    ball_cutout();
+                }
+            }
+            ccube(400, 400, -thickness);
+        }
+
+        for(i = stud_locations)
+        {
+            translate(i)
+            bottom_stud();
+        }
+    }
+}
+
+module stud_hole_cutouts()
+{
+    for(i = stud_locations)
+    {
+        translate([i[0], i[1], bottom])
+        bottom_stud_hole();
     }
 }
 
@@ -747,11 +822,6 @@ module wire_cutouts()
         translate([secondary_radius, 0, 0])
         wire_cutout_profile();
 
-        // Trim the front of the body so it's not pointy for no reason
-        rotate([0, 0, 45])
-        translate([0, 100, -1])
-        ccube(100, 100, 100);
-
         // Room for the breadboard under the handrest
         translate([breadboard_offset[0], breadboard_offset[1], 0])
         breadboard_cutout();
@@ -843,6 +913,7 @@ module full()
             sensor_access_cutouts();
             button_cutouts();
             wire_cutouts();
+            stud_hole_cutouts();
         }
 
         // Isolate bearing hole for testing purposes
