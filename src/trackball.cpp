@@ -134,11 +134,13 @@ adns sensor_2;
 // sensor location
 // azimuth = degrees clockwise from 12 o'clock (directly away from the user)
 // elevation = degrees down from horizontal
-// Assumption: the sensors are upright
+// inverted = sensor is rotated 180 degrees (so the wires come out on the top instead of the bottom)
 #define SENSOR_1_AZIMUTH 180
 #define SENSOR_1_ELEVATION 30
+#define SENSOR_1_INVERTED 1
 #define SENSOR_2_AZIMUTH (270 + 45)
 #define SENSOR_2_ELEVATION 30
+#define SENSOR_2_INVERTED 1
 
 Vector sensor_1_weights;
 Vector sensor_2_weights;
@@ -244,6 +246,18 @@ void loop()
     sensor_1.read_motion();
     sensor_2.read_motion();
     
+    // Cheat here by modifying the read values in the sensor objects.
+    if (SENSOR_1_INVERTED)
+    {
+      sensor_1.x = -sensor_1.x;
+      sensor_1.y = -sensor_1.y;
+    }
+    if (SENSOR_2_INVERTED)
+    {
+      sensor_2.x = -sensor_2.x;
+      sensor_2.y = -sensor_2.y;
+    }
+
     if (sensor_1.x != 0 || sensor_1.y != 0 || sensor_2.x != 0 || sensor_2.y != 0)
     {
       // Something moved.
