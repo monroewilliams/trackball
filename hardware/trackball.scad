@@ -94,6 +94,7 @@ module ccube(x, y, z)
 
 module rcube(x, y, z, r)
 {
+    translate([0, 0, z < 0 ? z : 0])
     linear_extrude(height = abs(z))
     rrect(x, y, r);
 }
