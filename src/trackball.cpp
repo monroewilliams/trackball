@@ -229,9 +229,8 @@ calculate_weights(SENSOR_2_AZIMUTH, SENSOR_2_ELEVATION, sensor_2_weights);
 void click()
 {
 #ifdef PIN_PIEZO
-  digitalWrite(PIN_PIEZO, HIGH);
-  delay(1);
-  digitalWrite(PIN_PIEZO, LOW);
+  // This is MUCH louder than just toggling the high/low once with digitalWrite().
+  tone(PIN_PIEZO, 2000, 5);
 #endif
 }
 

@@ -37,7 +37,7 @@ https://www.amazon.com/gp/product/B081SNH8J5/
 
 https://www.amazon.com/D2FC-F-7N-Micro-Switch-Microswitch-Switches/dp/B085LB7FZY/
 
-1 - micro piezo speaker if you want twist-scrolling to make a "click" sound. (If you don't want this, just undefine PIN_PIEZO in the trackball source and skip it.) The one I'm using at the moment worked well with the Pro Micro, but is really quiet at 3.3v on the XIAO, so not ideal anymore:
+1 - micro piezo speaker if you want twist-scrolling to make a "click" sound. (If you don't want this, just undefine PIN_PIEZO in the trackball source and skip it) :
 
 https://www.adafruit.com/product/160
 
