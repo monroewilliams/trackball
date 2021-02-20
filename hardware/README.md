@@ -18,14 +18,23 @@ https://wiki.seeedstudio.com/Seeeduino-XIAO/
 
 https://www.tindie.com/products/jkicklighter/adns-9800-optical-laser-sensor/
 
-1 - Standard mini breadboard (170 tie point version), available through many sources:
-
-https://www.amazon.com/Breadboard-Solderless-Prototype-Different-Raspberry/dp/B07LF71ZTS/
+Either:
 
 1 - regulation 2 1/4" (~57mm) billiard ball. If you can find one with some visual texture, it will make the optical sensors work better. I'm using the cue ball from a pearlescent set I bought from eBay just for this project, but one can probably find individual ones online if you don't want a whole set.
 
 The set I bought: https://www.ozonebilliards.com/product/pro-series-kandy-pearl-ball-set <br>
 Similar single cue ball: https://www.paramountindustriesinc.com/products/pearlescent-cue-ball
+
+or:
+
+1 - 55mm ball designed for an optical trackball. These are nice because they've got a sort of "sparkly" visual texture that works really well with the optical sensors. This ball will fit and work fine in a body printed with a ball diameter of 57mm, but I would recommend bumping ball_diameter down to 55 in trackball.scad for a better fit.<br>
+The Kensington Slimblade and Kensington Expert Mouse trackballs use this size, as does the Perixx Periboard combination keyboard/trackball. Perixx sells a compatible replacement ball, which is a good way to get one without buying extra hardware you don't need:
+
+https://www.amazon.com/gp/product/B07DXBMT6Z/
+
+1 - Standard mini breadboard (170 tie point version), available through many sources:
+
+https://www.amazon.com/Breadboard-Solderless-Prototype-Different-Raspberry/dp/B07LF71ZTS/
 
 3 - ceramic ball bearings, diameter 1/8 inch (3.175mm), which press-fit into holes in the printed body. 
 They're cheap in packs of 25 or 50, and I recommend getting some extras because they're really easy to lose.
