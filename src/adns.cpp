@@ -1,13 +1,13 @@
 #include <SPI.h>
 #include <avr/pgmspace.h>
 
+#include "trackball.h"
+#include "Vector.h"
 #include "adns.h"
 
 // This defines firmware_length and firmware_data
-
 #include "ADNS9800_firmware.h"
 
-#include "trackball.h"
 
 // Registers
 enum
@@ -82,38 +82,45 @@ static inline int bytes2int(byte h, byte l)
   return result;
 }
 
-void adns::init (int chip_select)
+  adns::adns(int ncs, int report_cpi)
+      : ncs(ncs), report_cpi(report_cpi)
+  {
+  }
+
+
+void adns::init ()
 {
-  this->ncs = chip_select;
+  pinMode (ncs, OUTPUT);
 
-  pinMode (this->ncs, OUTPUT);
-
-  this->com_end(); // ensure that the serial port is reset
-  this->com_begin(); // ensure that the serial port is reset
-  this->com_end(); // ensure that the serial port is reset
-  this->write_reg(REG_Power_Up_Reset, 0x5a); // force reset
+  com_end(); // ensure that the serial port is reset
+  com_begin(); // ensure that the serial port is reset
+  com_end(); // ensure that the serial port is reset
+  write_reg(REG_Power_Up_Reset, 0x5a); // force reset
   delay(50); // wait for it to reboot
   // read registers 0x02 to 0x06 (and discard the data)
-  this->read_reg(REG_Motion);
-  this->read_reg(REG_Delta_X_L);
-  this->read_reg(REG_Delta_X_H);
-  this->read_reg(REG_Delta_Y_L);
-  this->read_reg(REG_Delta_Y_H);
+  read_reg(REG_Motion);
+  read_reg(REG_Delta_X_L);
+  read_reg(REG_Delta_X_H);
+  read_reg(REG_Delta_Y_L);
+  read_reg(REG_Delta_Y_H);
   // upload the firmware
-  this->upload_firmware();
+  upload_firmware();
   delay(10);
   //enable laser(bit 0 = 0b), in normal mode (bits 3,2,1 = 000b)
   // reading the actual value of the register is important because the real
   // default value is different from what is said in the datasheet, and if you
   // change the reserved bytes (like by writing 0x00...) it would not work.
-  byte laser_ctrl0 = this->read_reg(REG_LASER_CTRL0);
-  this->write_reg(REG_LASER_CTRL0, laser_ctrl0 & 0xf0 );
+  byte laser_ctrl0 = read_reg(REG_LASER_CTRL0);
+  write_reg(REG_LASER_CTRL0, laser_ctrl0 & 0xf0 );
   
   DebugLogln(F("Chip initialized"));
-  
+
+  // By default, run the sensor at its maximum CPI value.  
+  set_cpi(8200);
+
   delay(1);
   
-  this->dispRegisters();
+  dispRegisters();
   
   delay(100);
 }
@@ -121,18 +128,18 @@ void adns::init (int chip_select)
 void adns::com_begin()
 {
   SPI.beginTransaction(SPISettings(2000000, MSBFIRST, SPI_MODE3));
-  digitalWrite(this->ncs, LOW);
+  digitalWrite(ncs, LOW);
 }
 
 void adns::com_end()
 {
-  digitalWrite(this->ncs, HIGH);
+  digitalWrite(ncs, HIGH);
   SPI.endTransaction();
 }
 
 byte adns::read_reg(byte reg_addr)
 {
-  this->com_begin();
+  com_begin();
   
   // send adress of the register, with MSBit = 0 to indicate it's a read
   SPI.transfer(reg_addr & 0x7f );
@@ -141,7 +148,7 @@ byte adns::read_reg(byte reg_addr)
   byte data = SPI.transfer(0);
   
   delayMicroseconds(mcs_tSCLK_NCS_read);
-  this->com_end();
+  com_end();
   delayMicroseconds(mcs_tSRW - mcs_tSCLK_NCS_read);
 
   // This is too spammy during normal use, but can be useful when debugging sensor issues.
@@ -158,7 +165,7 @@ byte adns::read_reg(byte reg_addr)
 
 void adns::write_reg(byte reg_addr, byte data)
 {
-  this->com_begin();
+  com_begin();
   
   //send adress of the register, with MSBit = 1 to indicate it's a write
   SPI.transfer(reg_addr | 0x80 );
@@ -166,7 +173,7 @@ void adns::write_reg(byte reg_addr, byte data)
   SPI.transfer(data);
   
   delayMicroseconds(mcs_tSCLK_NCS_write); // tSCLK-NCS for write operation
-  this->com_end();
+  com_end();
   delayMicroseconds(mcs_tSWW - mcs_tSCLK_NCS_write); // Could be shortened, but is looks like a safe lower bound 
 }
 
@@ -176,19 +183,19 @@ void adns::upload_firmware()
   // send the firmware to the chip, cf p.18 of the datasheet
 //  DebugLogln(F("Uploading firmware..."));
   // set the configuration_IV register in 3k firmware mode
-  this->write_reg(REG_Configuration_IV, 0x02); // bit 1 = 1 for 3k mode, other bits are reserved 
+  write_reg(REG_Configuration_IV, 0x02); // bit 1 = 1 for 3k mode, other bits are reserved 
   
   // write 0x1d in SROM_enable reg for initializing
-  this->write_reg(REG_SROM_Enable, 0x1d); 
+  write_reg(REG_SROM_Enable, 0x1d); 
   
   // wait for more than one frame period
   delay(10); // assume that the frame rate is as low as 100fps... even if it should never be that low
   
   // write 0x18 to SROM_enable to start SROM download
-  this->write_reg(REG_SROM_Enable, 0x18); 
+  write_reg(REG_SROM_Enable, 0x18); 
   
   // write the SROM file (=firmware data) 
-  this->com_begin();
+  com_begin();
   SPI.transfer(REG_SROM_Load_Burst | 0x80); // write burst destination adress
   delayMicroseconds(15);
   
@@ -201,7 +208,7 @@ void adns::upload_firmware()
     delayMicroseconds(15);
   }
 
-  this->com_end();
+  com_end();
 }
 
 void adns::dispRegisters(void)
@@ -228,7 +235,7 @@ void adns::dispRegisters(void)
 
   for(unsigned int rctr=0; rctr<(sizeof(oreg)/sizeof(oreg[0])); rctr++)
   {
-    regres = this->read_reg(oreg[rctr].id);
+    regres = read_reg(oreg[rctr].id);
     DebugLog(oreg[rctr].name);
     DebugLog(" (0x");
     DebugLog(oreg[rctr].id,HEX);
@@ -246,23 +253,29 @@ void adns::read_motion()
   byte xl = 0, yl = 0, xh = 0, yh = 0;
 
   // Reading the Motion register freezes the X/Y values until it's read again.
-  byte mot = this->read_reg(REG_Motion);
+  byte mot = read_reg(REG_Motion);
   
   if (mot & 0x80)
   {
     // If this bit is set, there has been motion since the last report
-    xl = this->read_reg(REG_Delta_X_L);
-    xh = this->read_reg(REG_Delta_X_H);
-    yl = this->read_reg(REG_Delta_Y_L);
-    yh = this->read_reg(REG_Delta_Y_H);
+    xl = read_reg(REG_Delta_X_L);
+    xh = read_reg(REG_Delta_X_H);
+    yl = read_reg(REG_Delta_Y_L);
+    yh = read_reg(REG_Delta_Y_H);
   }
   
   // Unfreeze the X/Y registers
-  this->read_reg(REG_Motion);
+  read_reg(REG_Motion);
   
   // Assemble the bytes into ints
-  this->x = bytes2int(xh, xl);  
-  this->y = bytes2int(yh, yl);  
+  x = bytes2int(xh, xl);  
+  y = bytes2int(yh, yl);  
+}
+
+Vector adns::motion()
+{
+    read_motion();
+    return Vector(x * cpi_scale_factor, y * cpi_scale_factor);
 }
 
 // This doesn't work properly.  I'm not sure why.
@@ -270,7 +283,7 @@ void adns::read_motion_burst()
 {
   byte burst[14];
   
-  this->com_begin();
+  com_begin();
   SPI.transfer(REG_Motion_Burst | 0x80 );
   delayMicroseconds(mcs_tSRAD);
   
@@ -279,15 +292,15 @@ void adns::read_motion_burst()
       burst[i] = SPI.transfer(0x00);
   }
   
-  this->com_end();
+  com_end();
   delayMicroseconds(mcs_tBEXIT);
   
   // Clear residual motion by writing the Motion register
-  this->write_reg(REG_Motion, 0x00);
+  write_reg(REG_Motion, 0x00);
   
   // Extract x and y
-  this->x = bytes2int(burst[3], burst[2]);  
-  this->y = bytes2int(burst[5], burst[4]);  
+  x = bytes2int(burst[3], burst[2]);  
+  y = bytes2int(burst[5], burst[4]);  
 
 #if SERIAL_DEBUG
     DebugLog(F("burst motion data:"));
@@ -297,26 +310,30 @@ void adns::read_motion_burst()
       DebugLog(F(" "));
     }
     DebugLog(F(", x = "));
-    DebugLog(this->x);
+    DebugLog(x);
     DebugLog(F(", y = "));
-    DebugLogln(this->y);
+    DebugLogln(y);
 #endif 
   
 }
 
 void adns::set_cpi(int cpi)
 {
+    current_cpi = cpi;
+    cpi_scale_factor = report_cpi;
+    cpi_scale_factor /= cpi;
+
     cpi /= 200;
     if (cpi < 1)
       cpi = 1;
     else if (cpi > 0x29)
       cpi = 0x29;
       
-    this->write_reg(REG_Configuration_I, cpi);
+    write_reg(REG_Configuration_I, cpi);
 }
 
 void adns::set_snap_angle(byte enable)
 {
-    this->write_reg(REG_Snap_Angle, enable?0x80:0x00);
+    write_reg(REG_Snap_Angle, enable?0x80:0x00);
 }
 

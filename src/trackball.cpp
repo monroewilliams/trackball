@@ -3,13 +3,11 @@
 
 #include "Adafruit_TinyUSB.h"
 #include "trackball.h"
+#include "Vector.h"
 #include "adns.h"
 
 #define USE_SCROLL_RESOLUTION_MULTIPLIER 0
 #define USE_CUSTOM_HID_DESCRIPTOR 1
-
-#define CUMULATIVE_MOTION_DEBUG 0
-// #define CUMULATIVE_MOTION_DEBUG SERIAL_DEBUG
 
 // HID report descriptor using TinyUSB's template
 // Single Report (no ID) descriptor
@@ -84,7 +82,6 @@ uint8_t const desc_hid_report[] =
 // USB HID object
 Adafruit_USBD_HID usb_hid;
 
-
 /*
   Common pin assignments:
   standard SPI (MOSI, MISO, SCLK)
@@ -126,45 +123,54 @@ const int buttonPins[] = { PIN_BUTTON_LEFT, PIN_BUTTON_RIGHT,  PIN_BUTTON_MIDDLE
 const int buttonCount = sizeof(buttonPins) / sizeof(buttonPins[0]);
 char buttons;
 
-// sensors
-adns sensor_1;
-adns sensor_2;
-// Run the sensor at higher cpi than we report (this will help with more precise angle calculations)
-const int sensor_cpi = 8200;
+// This is the cpi we want to report to the host.
 const int reported_cpi = 2400;
-const float sensor_cpi_multiplier = (float)sensor_cpi / (float)reported_cpi;
+// and the frequency at which we want to poll/report.
+const int report_Hz = 120;
+const int report_microseconds = 1000000 / report_Hz;
 
-// sensor location
-// azimuth = degrees clockwise from 12 o'clock (directly away from the user)
-// elevation = degrees down from horizontal
-// inverted = sensor is rotated 180 degrees (so the wires come out on the top instead of the bottom)
-#define SENSOR_1_AZIMUTH 180
-#define SENSOR_1_ELEVATION 30
-#define SENSOR_1_INVERTED 1
-#define SENSOR_2_AZIMUTH (270 + 45)
-#define SENSOR_2_ELEVATION 30
-#define SENSOR_2_INVERTED 1
+// The coordinate system here is a bit wonky -- in the final HID report, +X points right and +Y points "down" (towards the user),
+// and the direction of Z is arbitrary since we're translating it to scrollwheel ticks.
+// We're also conflating linear motion on the X/Y plane of each sensor tangent to the ball with rotation of the ball in X/Y/Z
 
-Vector sensor_1_weights;
-Vector sensor_2_weights;
+// sensor locations:
+// S#A = azimuth = degrees clockwise from 12 o'clock (directly away from the user)
+// S#E = elevation = degrees down from horizontal
+#define S1A 180
+#define S1E 30
+#define S2A (270 + 45)
+#define S2E 30
 
-#if CUMULATIVE_MOTION_DEBUG
-Vector cumulative_motion;
+// TODO: make a transform out of the azimuth/elevation constants.
+
+// The sensor transform
+// Note that the sensor orientation I've been using all along is actually "sideways", for mechanical reasons
+// i.e. the X axis of the sensor points up/down, and the Y axis points parallel to the desk.
+// This transform takes that into account.
+float st[3][4] = 
+{
+#if 1
+  // This is the "hack" transform I've been using for the new sensor location 
+  // (s1 at 180, s2 at  270 + 45, both at 30 degrees elevation)
+  {  1,        0,        sqrtf(2.0),  0   },  // X is s2.x, scaled up a bit, with s1.x subtracted to compensate for s2 being off-axis
+  { -1,        0,        0,           0   },  // Y is s1.x
+  {  0,        0.5,      0,           0.5 }   // Z is the average of the two sensors' y components.
+#else
+  // This was the transform for the original sensor location (s1 at 180 and s2 at 270, at zero elevation)
+  // The sensors were also inverted here (i.e. the part where the wires attach was at the bottom instead of the top)
+  {  0,        0,       -1,     0   },    // X is the inverse of the direct x reading of s2
+  {  1,        0,        0,     0   },    // Y is the direct x reading of s1
+  {  0,       -0.5,      0,    -0.5  }    // Z is the average of the two sensors' y components.
 #endif
+};
+
+// sensor hardware abstraction
+adns s1(PIN_SENSOR_1_SELECT, reported_cpi);
+adns s2(PIN_SENSOR_2_SELECT, reported_cpi);
 
 // scrolling
 const int scroll_tick = 64;
 float scroll_accum = 0;
-
-void calculate_weights(float azimuth, float elevation, Vector &out)
-{
-    // This currently ignores the elevation of the X and Y sensors.
-    // This should work fine for now, but doesn't give a completely accurate picture of the ball rotation.
-    out.x = sin(DEG_TO_RAD * azimuth);
-    // For correct directionality, we actually want y to be from 6 o'clock. Adjust that here.
-    out.y = cos(DEG_TO_RAD * (azimuth + 180));
-    out.z = cos(DEG_TO_RAD * elevation);
-}
 
 void setup() 
 {
@@ -183,7 +189,6 @@ void setup()
   // wait until device mounted
   while( !USBDevice.mounted() ) delay(1);
 
-
 #if SERIAL_DEBUG
   Serial.begin(115200);
 
@@ -199,20 +204,13 @@ void setup()
     
   SPI.begin();
   
-  sensor_1.init(PIN_SENSOR_1_SELECT);
-  sensor_2.init(PIN_SENSOR_2_SELECT);
-  
-  sensor_1.set_cpi(sensor_cpi);
-  sensor_2.set_cpi(sensor_cpi);
-  
+  s1.init();
+  s2.init();
+    
   for(int i=0; i<buttonCount; i++)
   {
       pinMode(buttonPins[i], INPUT_PULLUP);
   }
-
-  // Calculate the X, Y, and Z weights of the sensor angles.
-calculate_weights(SENSOR_1_AZIMUTH, SENSOR_1_ELEVATION, sensor_1_weights);
-calculate_weights(SENSOR_2_AZIMUTH, SENSOR_2_ELEVATION, sensor_2_weights);
 
 #ifdef PIN_PIEZO
   // Piezo output
@@ -234,9 +232,9 @@ void click()
 #endif
 }
 
-
 void loop() 
 {
+  unsigned long loop_start_time = micros();
   bool sendReport = false;
   bool sendWakeup = false;
   Vector delta;
@@ -245,93 +243,32 @@ void loop()
   // Poll sensors for mouse movement
   if(1)
   {
-    sensor_1.read_motion();
-    sensor_2.read_motion();
+    // v1 and v2 contain the floating point x/y motion values from each sensor, 
+    // scaled from the sensor's CPI to units of reported_cpi.
+    Vector v1 = s1.motion();
+    Vector v2 = s2.motion();
     
-    // Cheat here by modifying the read values in the sensor objects.
-    if (SENSOR_1_INVERTED)
-    {
-      sensor_1.x = -sensor_1.x;
-      sensor_1.y = -sensor_1.y;
-    }
-    if (SENSOR_2_INVERTED)
-    {
-      sensor_2.x = -sensor_2.x;
-      sensor_2.y = -sensor_2.y;
-    }
-
-    if (sensor_1.x != 0 || sensor_1.y != 0 || sensor_2.x != 0 || sensor_2.y != 0)
+    if (v1.x != 0 || v1.y != 0 || v2.x != 0 || v2.y != 0)
     {
       // The sensor reported movement.
 
-      // DebugLog(F("1x = "));
-      // DebugLog(sensor_1.x);
-      // DebugLog(F(", 1y = "));
-      // DebugLog(sensor_1.y);
-      // DebugLog(F(", 2x = "));
-      // DebugLog(sensor_2.x);
-      // DebugLog(F(", 2y = "));
-      // DebugLogln(sensor_2.y);
+      // multiply the sensor transform matrix by the vector of [v1.x, v1.y, v2.x, v2.y]
+      delta = Vector(
+        st[0][0] * v1.x + st[0][1] * v1.y + st[0][2] * v2.x + st[0][3] * v2.y, 
+        st[1][0] * v1.x + st[1][1] * v1.y + st[1][2] * v2.x + st[1][3] * v2.y, 
+        st[2][0] * v1.x + st[2][1] * v1.y + st[2][2] * v2.x + st[2][3] * v2.y
+      );
 
-      // This isn't quite correct (x movement is polluted with y). I think I've oversimplified the math.
-      if(CUMULATIVE_MOTION_DEBUG)
-      {
-        // For each component, use the sensor that would have the highest contribution
-        // (and therefore the best resolution) for that component.
-        delta.x = fabs(sensor_1_weights.x) > fabs(sensor_2_weights.x) ? 
-          sensor_1.x * sensor_1_weights.x :
-          sensor_2.x * sensor_2_weights.x ;
-        delta.y = fabs(sensor_1_weights.y) > fabs(sensor_2_weights.y) ? 
-          sensor_1.x * sensor_1_weights.y :
-          sensor_2.x * sensor_2_weights.y ;
-        delta.z = fabs(sensor_1_weights.z) > fabs(sensor_2_weights.z) ? 
-          sensor_1.y * sensor_1_weights.z :
-          sensor_2.y * sensor_2_weights.z ;
+      ////// This is probably only useful when actively debugging sensor readings or the transform matrix.
+      ////// Otherwise it gets very spammy.
+      // DebugLog(F("v1 = "));
+      // DebugLog(v1);
+      // DebugLog(F(", v2 = "));
+      // DebugLog(v2);
+      // DebugLog(F(", delta = "));
+      // DebugLog(delta);
+      // DebugLogln("");
 
-#if CUMULATIVE_MOTION_DEBUG
-        cumulative_motion += delta;
-
-        DebugLog(F("cumulative = "));
-        cumulative_motion.print();
-        DebugLogln("");
-#endif
-
-      }
-
-
-      if(0)
-      {
-        // Original sensor arrangement (s1 at 180 and s2 at 270)
-        delta.x = -sensor_2.x;
-        delta.y = sensor_1.x;
-
-        // Average both sensors' rotation-aligned contribution.
-        delta.z = -((sensor_1.y + sensor_2.y) / 2);
-      }
-      else
-      {
-        // New sensor arrangement (sensors at 180 and 270 + 45)
-        // Sensors are also tilted down below horizontal by about 30 degrees, for easier mounting, but I don't _think_ that changes the numbers.
-        
-        // The y sensor reading is correct as-is.
-        delta.y = sensor_1.x;
-
-        // The x sensor will be "contaminated" with a Y component, and also attenuated due to being off-axis.
-        // This calculation isn't quite correct, but it's close enough.
-        delta.x = (
-              - sensor_2.x                        // original amount
-              - (delta.y * (1.0 / sqrtf(2.0)))    // subtract out y
-            ) * sqrtf(2.0);                       // and scale up to counter attenuation
-
-        // Average both sensors' rotation-aligned contribution.
-        delta.z = -((sensor_1.y + sensor_2.y) / 2);
-      }
-
-      // Scale all movement to the sensor reporting factor.
-      delta.x /= sensor_cpi_multiplier;
-      delta.y /= sensor_cpi_multiplier;
-      delta.z /= sensor_cpi_multiplier;
-      
       // Figure out if we should scroll
       if ((fabs(delta.z) > (fabs(delta.x) * 2)) && (fabs(delta.z) > (fabs(delta.y) * 2)))
       {
@@ -386,11 +323,6 @@ void loop()
           buttons |= name;
           sendReport = true;
           sendWakeup = true;
-
-#if CUMULATIVE_MOTION_DEBUG
-          // HACK: reset cumulative motion on any button press
-          cumulative_motion = Vector();
-#endif
         }
       }
       else
@@ -463,8 +395,13 @@ void loop()
 #endif
   }
 
-  // 8ms puts our updates around 120hz, which should be sufficient.
-  delay(8);
+  // Delay to keep the loop time right around report_microseconds
+  unsigned long time_elapsed = micros() - loop_start_time;
+  if (time_elapsed < report_microseconds)
+  {
+    delayMicroseconds(report_microseconds - time_elapsed);
+  }
+    
 }
 
 
