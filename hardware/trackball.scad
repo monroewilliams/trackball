@@ -9,7 +9,7 @@ body_diameter=67;
 // Pool ball is 57mm in diameter.
 // Ball from the Kensington Slimblade is 55mm.
 // Bearings are 1/8" == 3.175mm
-ball_diameter=57;
+ball_diameter=55;
 ball_clearance=1;
 bearing_diameter=3.175;
 
@@ -27,13 +27,16 @@ sensor_angle=60;
 // Having the sensors directly face-on to the ball doesn't work.
 // I suspect this is due to specular reflection washing out the surface details.
 sensor_skew_angle=10;
+sensor_type_adns9800 = 0;
+sensor_type_pmw3360 = 1;
 
 // Sensor params are:
 // - location angle (clockwise from top)
 // - sensor needs bottom access cutout (boolean)
+// - sensor type (defined above)
 sensor_params = [
-    [180, true],
-    [45, true]
+    [180, true, sensor_type_pmw3360],
+    [45, true, sensor_type_pmw3360]
 ];
 sensor_clearance=2;
 lens_thickness=3.3;
@@ -57,20 +60,29 @@ bottom = -(recess_radius + bottom_clearance);
 // 5 - cutout rotation
 // 6 - front overhang (should match up with parametrs in microswitch_cherry_mx.scad)
 // 7 - rear overhang (same)
+// 8 - create bottom access cutout
 button_params = [
     // main button
-    [110, 27, 12, -5, 7, -3 - 90, 5, 20],
+    [110, 27, 12, -5, 7, -3 - 90, 5, 20, true],
 
-    // second button
+    // ring finger button
     // first model version:
     // [-60, 30, 13, 24, 0, 90, 5, 20]
-    [-60, 33, 13, 30, 0, 0, 0, 0],
-    // other attempts:
+    // second version, for 57mm model
+    // [-60, 33, 13, 30, 0, 0, 0, 0, true],
+    // third version, for 55mm model, moved slightly clockwise
+    [-70, 33, 13, 30, -8, 5, 0, 0, true],
+ 
+    // other attempts at ring finger button:
     // [-60, 38, 12, 30, 0, 0 + 90, 5,10]
     // [-30, 34, 14, 40, 33, -9 + 90, 5, 20],
    
-    // third (middle) button
-    [-10, 19, 13, 30, 30, 12, 0, 0]
+    // middle finger button, mk. 1
+    // [-10, 19, 13, 30, 30, 12, 0, 0, true],
+
+    // second thumb button (work in progress)
+    [165, -8, 16, 90, 55, 50, 1, 20, false],
+
 ];
 
 module button_transform(params)
@@ -103,7 +115,7 @@ module rrect(x, y, r)
 {
     translate([-x/2, -y/2, 0])
     translate([r, r, 0])
-    offset(r, $fs = r/2)
+    offset(r, $fs = 1)
     square([x - (r * 2), y - (r * 2)]);
 }
 
@@ -234,128 +246,321 @@ module button_access_base()
     }
 }
 
-module sensor_cutout()
+
+adns9800_board_radius = 32;
+
+// The pmw3360 board is 28mm wide, but the lens assembly is not quite centered on it.
+// Either offset it slightly with pmw3360_board_offset or add a little extra width
+// and let the size of the holes take up the slop.
+pmw3360_board_width = 28 + 1;
+pmw3360_board_offset = 0;
+pmw3360_board_height = 21 + 1;
+pmw3360_lens_radius = 7;
+pmn3360_curved_top_scale = 0.25;
+
+module sensor_screw_hole()
 {
-    union()
+    // the screw hole
+    translate([0, 0,-4])
+    color("white", 0.5)
+    // my original unknown-source self-tapping screws
+    // cylinder(d=1.5, h=10);
+    // 2mm machine screws
+    cylinder(d=2, h=10);
+
+
+    // screwdriver access
+    translate([0, 0,-104])
+    color("white", 0.5)
+    cylinder(d=5, h=100, $fn=16);
+}
+
+module sensor_cutout(params)
+{
+    if (params[2] == sensor_type_adns9800)
     {
-        // origin of the sensor is at the surface of the lens, 
-        // with the lens facing towards +z, and the top of the sensor towards +y
-    
-        // window portion of lens is roughly 11x9mm. This will make a window.
-        color("white", 0.25)
-        ccube(11, 9, 6);
-        
-//        // Keep the intersection of the holes from being an overhang.
-//        translate([0, 7.5 / 2, 0])
-//        color("white", 0.25)
-//        ccube(15, 7.5, 6);
-        
-        // Lens portion of sensor is 22 x 20 mm, centered on the board
-        color("gray", 0.5)
-        intersection()
+        union()
         {
-            ccube(22,32, -(lens_thickness + 1));
-            translate([0, 0, -(lens_thickness + 2)])
-            cylinder(d=32, h=lens_thickness + 3, $fa=5);
+            // origin of the sensor is at the surface of the lens, 
+            // with the lens facing towards +z, and the "top" of the sensor (where the wires exit) towards +y
+        
+            // window portion of lens is roughly 11x9mm. This will make a window.
+            color("white", 0.25)
+            hull()
+            {
+                rcube(11, 9, 6, 2);
+                // round the top to reduce bridging
+                translate([0, 2.5, 0])
+                scale([1, 0.5, 1])
+                cylinder(d=11, h=6);
+            }
+                        
+            // Lens portion of sensor is 22 x 20 mm, centered on the board
+            color("gray", 0.5)
+            intersection()
+            {
+                ccube(22,adns9800_board_radius, -(lens_thickness + 1));
+                translate([0, 0, -(lens_thickness + 2)])
+                cylinder(d=adns9800_board_radius, h=lens_thickness + 3, $fa=5);
+            }
+        
+            // the board is a 32mm circle, ~2mm thick.
+            // Add some thickness to the back to leave room for components, etc.
+            z = sensor_board_thickness + sensor_board_clearance;
+            translate([0,0,-(lens_thickness + z)])
+            {
+                // The board itself
+                color("green", 0.5) cylinder(d=adns9800_board_radius, h=z, $fa = 5);
+                
+                // Hemisphere for clearance
+                difference()
+                {
+                    color("white", 0.25)
+                    sphere(d=adns9800_board_radius, $fa = 5);
+                    
+                    translate([0,0,1])
+                    cylinder(d=adns9800_board_radius, h=17, $fa=5);
+                }
+            }
+            
+            // The screws are 27mm apart, on the centerline of the board.
+            screw_distance=27;
+            for(i = [ screw_distance/2,
+                    -screw_distance/2 ] )
+            {
+                translate([i, 0, 0])
+                sensor_screw_hole();
+            }
         }
-    
+    }
+    else if(params[2] == sensor_type_pmw3360)
+    {
+        union()
+        {
+            // origin of the sensor is at the surface of the lens, 
+            // with the lens facing towards +z, and the "top" of the sensor (where the wires exit) towards +y
+        
+            // window portion of lens is roughly 11x9mm. This will make a window.
+            color("white", 0.25)
+            hull()
+            {
+                rcube(11, 9, 6, 2);
+                // round the top to reduce bridging
+                translate([0, 2.5, 0])
+                scale([1, 0.5, 1])
+                cylinder(d=11, h=6);
+            }
+            
+            // Lens portion of sensor is 21.2 x 19 mm
+            color("gray", 0.5)
+            intersection()
+            {
+                rcube(22, 20, -(lens_thickness + 1), pmw3360_lens_radius);
+                // translate([0, 0, -(lens_thickness + 2)])
+                // cylinder(d=32, h=lens_thickness + 3, $fa=5);
+                
+            }
+
+            // The board is shifted slightly relative to the lens
+            translate([pmw3360_board_offset, 0, 0])
+            {
+                // leave room for the wire solder joints on the lens side
+                // color("white", 0.25)
+                translate([0, pmw3360_board_height/2, ])
+                {
+                    hull()
+                    {
+                        translate([0, -2, 0])
+                        ccube(pmw3360_board_width, 4, -(lens_thickness + 1));
+
+                        // Curved cut above the board to reduce bridging
+                        translate([0, 0, -(lens_thickness)])
+                        scale([1, pmn3360_curved_top_scale, 1])
+                        cylinder(d=pmw3360_board_width, h=0.1);
+                    }
+                }
+
+                // the board is a 28mm x 21mm rectangle, ~2mm thick.
+                // Add some thickness to the back to leave room for components, etc.
+                z = sensor_board_thickness + sensor_board_clearance;
+                translate([0,0,-(lens_thickness + z)])
+                {
+                    // The board itself
+                    color("green", 0.5) ccube(pmw3360_board_width, pmw3360_board_height, z);
+
+                    hull()
+                    {
+                        // Curved cut above the board to reduce bridging
+                        color("white", 0.25)
+                        translate([0, pmw3360_board_height/2, z])
+                        scale([1, pmn3360_curved_top_scale, 1])
+                        cylinder(d=pmw3360_board_width, h=0.1);
+                        
+                        // backside clearance (half cylinder)
+                        difference()
+                        {
+                            color("white", 0.25)
+                            rotate([0, 90, 0])
+                            cylinder(center = true, d=pmw3360_board_height, h=pmw3360_board_width, $fa = 5);
+                            
+                            translate([0,0,1])
+                            ccube(pmw3360_board_width + 2, pmw3360_board_height + 2, 17);
+                        }
+                    }
+                }
+                
+                // The screws are 24mm apart, on the centerline of the board.
+                screw_distance=24;
+                for(i = [ screw_distance/2,
+                        -screw_distance/2 ] )
+                {
+                    translate([i, 0, 0])
+                    sensor_screw_hole();
+                }
+            }
+        }
+    }
+}
+
+module sensor_access_base(params)
+{
+    // This is just the backside model, used to create an access hole.
+    if (params[2] == sensor_type_adns9800)
+    {
         // the board is a 32mm circle, ~2mm thick.
         // Add some thickness to the back to leave room for components, etc.
         z = sensor_board_thickness + sensor_board_clearance;
         translate([0,0,-(lens_thickness + z)])
         {
             // The board itself
-            color("green", 0.5) cylinder(d=32, h=z, $fa = 5);
+            cylinder(d=adns9800_board_radius, h=z, $fa = 5);
             
             // Hemisphere for clearance
             difference()
             {
-                color("white", 0.25)
-                sphere(d=32, $fa = 5);
+                sphere(d=adns9800_board_radius, $fa = 5);
                 
                 translate([0,0,1])
-                cylinder(d=32, h=17, $fa=5);
+                cylinder(d=adns9800_board_radius, h=17, $fa=5);
             }
         }
-        
-        // The screws are 27mm apart, on the centerline of the board.
-        screw_distance=27;
-        for(i = [ screw_distance/2,
-                  -screw_distance/2 ] )
-        {
-            // the screw hole
-            translate([i, 0,-4])
-            color("white", 0.5)
-            cylinder(d=1.5, h=10);
-
-            // screwdriver access
-            translate([i, 0,-104])
-            color("white", 0.5)
-            cylinder(d=5, h=100, $fn=16);
-        }
-        
-        // Leave room for the lens-side soldered ends of the wires.
-        // translate ([0,-12, 0])
-        // color("red", 0.5)
-        // ccube(12, 4, -(lens_thickness + 1));
     }
-}
-
-module sensor_access_base()
-{
-    // This is just the backside model, used to create an access hole.
-    // the board is a 32mm circle, ~2mm thick.
-    // Add some thickness to the back to leave room for components, etc.
-    z = sensor_board_thickness + sensor_board_clearance;
-    translate([0,0,-(lens_thickness + z)])
+    else if(params[2] == sensor_type_pmw3360)
     {
-        // The board itself
-        cylinder(d=32, h=z, $fa = 5);
-        
-        // Hemisphere for clearance
-        difference()
+        // the board is a 28mm x 21mm rectangle, ~2mm thick.
+        // Add some thickness to the back to leave room for components, etc.
+        z = sensor_board_thickness + sensor_board_clearance;
+        translate([0,0,-(lens_thickness + z)])
         {
-            sphere(d=32, $fa = 5);
-            
-            translate([0,0,1])
-            cylinder(d=32, h=17, $fa=5);
+            // The board is shifted slightly relative to the lens
+            translate([pmw3360_board_offset, 0, 0])
+            {
+                // The board itself
+                color("green", 0.5) ccube(pmw3360_board_width, pmw3360_board_height, z);
+                
+                hull()
+                {
+                    // Curved cut above the board to reduce bridging
+                    color("white", 0.25)
+                    translate([0, pmw3360_board_height/2, z])
+                    scale([1, pmn3360_curved_top_scale, 1])
+                    cylinder(d=pmw3360_board_width, h=0.1);
+
+                    // backside clearance (half cylinder)
+                    difference()
+                    {
+                        color("white", 0.25)
+                        rotate([0, 90, 0])
+                        cylinder(center = true, d=pmw3360_board_height, h=pmw3360_board_width, $fa = 5);
+                        
+                        translate([0,0,1])
+                        ccube(pmw3360_board_width + 2, pmw3360_board_height + 2, 17);
+                    }
+                }
+            }
         }
     }
 }
 
-module sensor_shell()
+module sensor_shell(params)
 {
     // A solid which completely encloses the sensor cutout/access cutout,
     // so it can be protected from the top.
 
-    // This is essentially the sphere defined by sensor_access_base, expanded by 2mm.
-    z = sensor_board_thickness + sensor_board_clearance;
-    translate([0,0,-(lens_thickness + z)])
+    if (params[2] == sensor_type_adns9800)
     {
-        sphere(d=36, $fa = 5);
+        // This is essentially the sphere defined by sensor_access_base, expanded by 2mm.
+        z = sensor_board_thickness + sensor_board_clearance;
+        translate([0,0,-(lens_thickness + z)])
+        {
+            sphere(d=adns9800_board_radius + 4, $fa = 5);
+        }
+    }
+    else if(params[2] == sensor_type_pmw3360)
+    {
+        // The backside clearance half-cylinder, extended to a full cylinder, and made 2mm larger
+        z = sensor_board_thickness + sensor_board_clearance;
+        translate([0,0,-(lens_thickness + z)])
+        {
+            // The board is shifted slightly relative to the lens
+            translate([pmw3360_board_offset, 0, 0])
+            {
+                hull()
+                {
+                    // Curved cut above the board to reduce bridging
+                    translate([0, 2 + pmw3360_board_height/2, z])
+                    scale([1, pmn3360_curved_top_scale, 1])
+                    cylinder(d=4 + pmw3360_board_width, h=0.1);
+
+                    rotate([0, 90, 0])
+                    cylinder(center = true, d=pmw3360_board_height + 4, h=pmw3360_board_width + 4, $fa = 5);
+                }
+            }
+        }
     }
 }
 
-module sensorpod()
+module sensorpod(params)
 {
     rotate([sensor_angle, 0, 0])
     translate([0, 0, -(lens_thickness + ball_radius + sensor_clearance)]) 
     {
         rotate([sensor_skew_angle, 0, 0])
-        difference()
         {
-            cylinder(d=32, h=lens_thickness);
-            
-            translate([-17, 2, 0]) 
-            cube([34,20,lens_thickness]);
+            if (params[2] == sensor_type_adns9800)
+            {
+                difference()
+                {
+                    cylinder(d=adns9800_board_radius, h=lens_thickness);
+                    
+                    translate([-17, 2, 0]) 
+                    cube([adns9800_board_radius + 2, 20, lens_thickness]);
+                }
+            }
+            else if(params[2] == sensor_type_pmw3360)
+            {
+                // The board is shifted slightly relative to the lens
+                translate([pmw3360_board_offset, 0, 0])
+                {
+                    ccube(pmw3360_board_width, pmw3360_board_height, lens_thickness);
+                }
+            }
         }
-//    translate([-17, -16, ball_radius + ball_clearance]) 
-//    cube([34,20,4]);
     }
 }
 
 breadboard_size = [46.5, 34.75, 9.5];
-breadboard_offset = [-5, -50];
+breadboard_offset = [-5, -(ball_radius + 21.5)];
+
+module breadboard_tab()
+{
+    hull()
+    {
+        ccube(5.0, 5.0, 6.5);
+        translate([0, 0, 6.5])
+        sphere(d=4, $fn=16);
+    }
+}
 
 module breadboard_cutout()
 {
@@ -373,7 +578,7 @@ module breadboard_cutout()
 
             // Tweak the location of the top of the cutout to make it a reasonable shell
             // Note that any adjustment to the body shape may require adjusting this.
-            translate([2.0, 2.0, -4.0])
+            translate([4.0, 2.0, -4.0])
             translate([-breadboard_offset[0], -breadboard_offset[1], -bottom])
             body();
 
@@ -381,13 +586,13 @@ module breadboard_cutout()
 
         // connection tabs
         translate([0, breadboard_size[1] / 2, 0])
-        ccube(5.0, 5.0, 6.5);
+        breadboard_tab();
         translate([0, -breadboard_size[1] / 2, 0])
-        ccube(5.0, 5.0, 6.5);
+        breadboard_tab();
         translate([breadboard_size[0] / 2, 0, 0])
-        ccube(5.0, 5.0, 6.5);
+        breadboard_tab();
         translate([-breadboard_size[0] / 2, 0, 0])
-        ccube(5.0, 5.0, 6.5);
+        breadboard_tab();
 
         // USB Cable clearance
         translate([0, 0, 4])
@@ -728,7 +933,7 @@ module body_minimal()
                     for(i = sensor_params )
                     {
                         rotate(i[0])
-                        sensorpod();
+                        sensorpod(i);
                     }
 
                     // Button pods
@@ -746,7 +951,7 @@ module body_minimal()
 }
 
 wire_channel_size = 10;
-wire_channel_primary_radius = 25;
+wire_channel_primary_radius = ball_radius - 3.5;
 
 module wire_cutout_profile()
 {
@@ -845,7 +1050,7 @@ module sensor_cutouts()
         difference()
         {
             sensor_transform(params)
-            sensor_cutout();
+            sensor_cutout(params);
             
             // // Clip the cutouts to the top of the base ring.
             // translate([0, 0, body_height + bottom])
@@ -863,7 +1068,7 @@ module sensor_access_cutouts()
             // Bottom access cutout
             shadow_hull()
             sensor_transform(params)
-            sensor_access_base();
+            sensor_access_base(params);
         }
     }
 }
@@ -876,7 +1081,7 @@ module sensor_shells()
         {
             shadow_hull()
             sensor_transform(params)
-            sensor_shell();
+            sensor_shell(params);
         }
     }
 }
@@ -890,10 +1095,13 @@ module button_cutouts()
         button_transform(params)
         button_cutout(params[6], params[7]);
 
-        // Bottom access cutout for the button
-        shadow_hull()
-        button_transform(params)
-        button_access_base();
+        if (params[8])
+        {
+            // Bottom access cutout for the button
+            shadow_hull()
+            button_transform(params)
+            button_access_base();
+        }
 
     }
 }
