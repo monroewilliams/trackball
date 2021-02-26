@@ -14,9 +14,22 @@ Other components I'm using in the build:
 
 https://wiki.seeedstudio.com/Seeeduino-XIAO/
 
-2 -  ADNS-9800 laser optical mouse sensor breakouts from here:
+The Adafruit QT Py is very similar (with the same pinout and processor) and should work with minimal changes to the code. It has a couple of niceties over the XIAO, including an actual reset button and an RGB LED that could be used to light things up.
+
+https://www.adafruit.com/product/4600
+
+2 -  Optical mouse sensors. I origially started this project with ADNS-9800 laser optical mouse sensor breakouts from here:
 
 https://www.tindie.com/products/jkicklighter/adns-9800-optical-laser-sensor/
+
+and have since picked up two PMW3360 optical mouse sensor breakouts from here:
+
+https://www.tindie.com/products/jkicklighter/pmw3360-motion-sensor/
+
+The plastics have options to use either kind, or even one of each. I'm working on adding support for the PMW3360 to the code.<br>
+It looks like the PMW3389 breakout from the same source would also fit the plastics, although I'd have to add support for it in the code:
+
+https://www.tindie.com/products/jkicklighter/pmw3389-motion-sensor/
 
 Either:
 
@@ -42,14 +55,19 @@ I'm using these:
 
 https://www.amazon.com/gp/product/B081SNH8J5/
 
+these should work equally well:
+
+https://www.amazon.com/gp/product/B07ZKPZK8Y/
+
 2 - Subminiature microswitches, OMRON D2FC-F-7N or equivalent:
 
 https://www.amazon.com/D2FC-F-7N-Micro-Switch-Microswitch-Switches/dp/B085LB7FZY/
 
-1 - micro piezo speaker if you want twist-scrolling to make a "click" sound. (If you don't want this, just undefine PIN_PIEZO in the trackball source and skip it) :
+1 - micro piezo speaker if you want twist-scrolling to make a "click" sound. (If you don't want this, just undefine PIN_PIEZO in the trackball source and skip it). These are available from multiple sources, the one I'm using is:
 
 https://www.adafruit.com/product/160
 
-4 - Small (2mm x 5mm or so) self-tapping screws to hold the sensors in place (no idea where to get these, I had them in my junk parts stash)
+4 - M2 x 6mm machine screws to hold the sensors in place. (I originally used some tiny self-tapping screws I had in my junk parts stash, but have since enlarged the screw holes to fit machine screws -- they should hold fine in PETG as long as you don't over-tighten them.)
 
-Various jumper wires, solder, etc.
+misc - Hookup wires, solder, etc. for wiring up the sensors and switches. I used some old ribbon cable for the sensor wiring to keep things tidy. I find that soldering the wires to break-apart male header pins makes for solid plug-in attachement to the breadboard.
+
