@@ -9,6 +9,16 @@
 #define USE_SCROLL_RESOLUTION_MULTIPLIER 0
 #define USE_CUSTOM_HID_DESCRIPTOR 1
 
+// If this is set, look for an SSD1327 display on the i2c bus and use it to display the images from the sensors.
+// The display I'm using is one of these: https://www.adafruit.com/product/4741
+#define SENSOR_DISPLAY 0
+// If this is set, scale sensor data image for higher contrast using floating point math.
+#define SCALE_SENSOR_DATA 1
+
+#if SENSOR_DISPLAY
+  #include <Adafruit_SSD1327.h>
+#endif
+
 // HID report descriptor using TinyUSB's template
 // Single Report (no ID) descriptor
 uint8_t const desc_hid_report[] =
@@ -176,6 +186,111 @@ adns s2(PIN_SENSOR_2_SELECT, reported_cpi);
 const int scroll_tick = 64;
 float scroll_accum = 0;
 
+
+#if SENSOR_DISPLAY
+Adafruit_SSD1327 display(128, 128, &Wire, -1, 1000000);
+const int display_address = 0x3D;
+bool sensor_display_mode = false;
+bool display_ready = false;
+
+void reset_display()
+{
+    display.clearDisplay();
+    display.setTextSize(1);
+    display.setTextWrap(true);
+    display.setTextColor(SSD1327_WHITE);
+    display.setCursor(0,0);
+    if (sensor_display_mode) {
+      display.println(F("Press all 3 buttons\ntogether to return\nto trackball mode."));
+    } else {    
+      display.println(F("Press all 3 buttons\ntogether to view \nsensor data."));
+    }
+    display.display();
+}
+
+void draw_sensor_pixels(int x, int y, uint8_t *pixels)
+{
+#if SCALE_SENSOR_DATA
+  // Scale the data to show maxumum contrast using the 16 gray levels available.
+  // Scan the data and find the min and max pixel values
+  uint8_t min = 255;
+  uint8_t max = 0;
+  for (int i = 0; i < 900; i++)
+  {
+    uint8_t cur = pixels[i];
+    if (cur < min) min = cur;
+    if (cur > max) max = cur;
+  }
+  // Scale the pixels so that the darkest gets value 0 and the brightest gets 15
+  int range = max - min;
+  float scale = (range > 0)?(255.0 / range):1.0;
+  scale *= (15.0 / 255.0);
+#endif
+
+  // I'm ashamed of this blit loop.
+  int i = 0;
+  for(int ix = 0; ix < 30; ix++)
+  for(int iy = 0; iy < 30; iy++)
+  {
+    uint16_t color = pixels[i];
+#if SCALE_SENSOR_DATA
+    color = scale * (color - min);
+#else
+    color >>= 4;
+#endif
+    display.fillRect(x + (2 * ix), y + (2 * iy), 2, 2, color);
+    i++;
+  }
+}
+
+void display_sensors()
+{
+  uint8_t pixels[900];
+  unsigned long read1 = micros();
+  s1.read_image(pixels);
+  unsigned long render1 = micros();
+  draw_sensor_pixels(0, 64, pixels);
+  unsigned long read2 = micros();
+  s2.read_image(pixels);
+  unsigned long render2 = micros();
+  draw_sensor_pixels(64, 64, pixels);
+  unsigned long xfer = micros();
+  display.display();
+  unsigned long end = micros();
+
+  DebugLog(F("read took "));
+  DebugLog((render1 - read1) + (render2 - read2));
+  DebugLog(F(", render took "));
+  DebugLog((read2 - render1) + (xfer - render2));
+  DebugLog(F(", xfer took "));
+  DebugLogln(end - xfer);
+}
+
+void set_sensor_display(bool enable)
+{
+  if (!sensor_display_mode && enable) {
+    sensor_display_mode = true;
+    reset_display();
+    s1.begin_image_capture();
+    s2.begin_image_capture();
+  } else if (sensor_display_mode && !enable) {
+    sensor_display_mode = false;
+    reset_display();
+    s1.end_image_capture();
+    s2.end_image_capture();
+  }
+
+}
+
+void disable_sensor_display()
+{
+  sensor_display_mode = false;
+  s1.end_image_capture();
+  s2.end_image_capture();
+}
+
+#endif
+
 void setup() 
 {
   // pinMode(LED_BUILTIN, OUTPUT);
@@ -229,6 +344,31 @@ void setup()
   pinMode(PIN_PIEZO, OUTPUT);
 #endif
 
+#if SENSOR_DISPLAY
+  // Probe the display's address over i2c
+  Wire.beginTransmission(display_address);
+  if (Wire.endTransmission() != 4)
+  {
+    // Something responded at the correct address. Assume it's the display.
+    if ( display.begin(display_address) ) 
+    {
+      display_ready = true;
+      DebugLogln(F("Display initialized"));
+
+      reset_display();
+    }
+    else
+    {
+      DebugLogln(F("Display init failed"));
+    }
+  }
+  else
+  {
+    DebugLogln(F("Display not found"));
+  }
+
+#endif
+
 #if SERIAL_DEBUG
   Serial.println(F("Initialization complete."));
   delay(100);
@@ -252,9 +392,16 @@ void loop()
   Vector delta;
   int scroll = 0;
 
-  // Poll sensors for mouse movement
-  if(1)
+#if SENSOR_DISPLAY
+  if(sensor_display_mode)
   {
+    display_sensors();
+  }
+  else
+#endif
+  {
+    // Poll sensors for mouse movement
+
     // v1 and v2 contain the floating point x/y motion values from each sensor, 
     // scaled from the sensor's CPI to units of reported_cpi.
     Vector v1 = s1.motion();
@@ -349,6 +496,20 @@ void loop()
         }
       }
     }
+#if SENSOR_DISPLAY
+    // Only if the display was found on startup...
+    if (display_ready)
+    {
+      // Check for the toggle condition
+      static char prevButtons = 0;
+      if (buttons == 0x07 && prevButtons != 0x07)
+      {
+        set_sensor_display(!sensor_display_mode);
+      }
+      prevButtons = buttons;
+    }
+#endif
+
   }
   if (sendWakeup && USBDevice.suspended())
   {

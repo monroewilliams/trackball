@@ -8,6 +8,15 @@ public:
     // Polls the sensor and returns motion vector scaled to report_cpi
     Vector motion();
 
+    // This puts the sensor into image capture mode. 
+    // While in this mode, it will not report motion.
+    void begin_image_capture();
+    // This reads pixels from the sensor when in capture mode.
+    // It will store 900 bytes (one byte per pixel) to the specified address.
+    void read_image(uint8_t *pixels);
+    // This ends image capture mode and puts the sensor back into motion tracking mode.
+    void end_image_capture();
+
     // All of these are filled in each time we do a burst motion read.
     byte Motion;
     byte Observation;
@@ -24,7 +33,9 @@ private:
     // The arduino pin number this chip's chip select is tied to.
     int ncs;
 
+    void reset();
     void upload_firmware();
+    void enable_laser();
     void com_begin();
     void com_end();
 
@@ -40,5 +51,6 @@ private:
     int current_cpi;
     int report_cpi;
     double cpi_scale_factor;
+    bool capture_mode;
 
 };

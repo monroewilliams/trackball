@@ -85,6 +85,7 @@ static inline int bytes2int(byte h, byte l)
   adns::adns(int ncs, int report_cpi)
       : ncs(ncs), report_cpi(report_cpi)
   {
+    capture_mode = false;
   }
 
 
@@ -92,27 +93,13 @@ void adns::init ()
 {
   pinMode (ncs, OUTPUT);
 
-  com_end(); // ensure that the serial port is reset
-  com_begin(); // ensure that the serial port is reset
-  com_end(); // ensure that the serial port is reset
-  write_reg(REG_Power_Up_Reset, 0x5a); // force reset
-  delay(50); // wait for it to reboot
-  // read registers 0x02 to 0x06 (and discard the data)
-  read_reg(REG_Motion);
-  read_reg(REG_Delta_X_L);
-  read_reg(REG_Delta_X_H);
-  read_reg(REG_Delta_Y_L);
-  read_reg(REG_Delta_Y_H);
+  reset();
+
   // upload the firmware
   upload_firmware();
-  delay(10);
-  //enable laser(bit 0 = 0b), in normal mode (bits 3,2,1 = 000b)
-  // reading the actual value of the register is important because the real
-  // default value is different from what is said in the datasheet, and if you
-  // change the reserved bytes (like by writing 0x00...) it would not work.
-  byte laser_ctrl0 = read_reg(REG_LASER_CTRL0);
-  write_reg(REG_LASER_CTRL0, laser_ctrl0 & 0xf0 );
-  
+
+  enable_laser();
+
   DebugLogln(F("Chip initialized"));
 
   // By default, run the sensor at its maximum CPI value.  
@@ -123,6 +110,34 @@ void adns::init ()
   dispRegisters();
   
   delay(100);
+
+  capture_mode = false;
+}
+
+void adns::reset()
+{
+  com_end(); // ensure that the serial port is reset
+  com_begin(); // ensure that the serial port is reset
+  com_end(); // ensure that the serial port is reset
+  write_reg(REG_Power_Up_Reset, 0x5a); // force reset
+  delay(50); // wait for it to reboot
+
+  // read registers 0x02 to 0x06 (and discard the data)
+  read_reg(REG_Motion);
+  read_reg(REG_Delta_X_L);
+  read_reg(REG_Delta_X_H);
+  read_reg(REG_Delta_Y_L);
+  read_reg(REG_Delta_Y_H);
+}
+
+void adns::enable_laser()
+{
+  // enable laser(bit 0 = 0b), in normal mode (bits 3,2,1 = 000b)
+  // reading the actual value of the register is important because the real
+  // default value is different from what is said in the datasheet, and if you
+  // change the reserved bytes (like by writing 0x00...) it would not work.
+  byte laser_ctrl0 = read_reg(REG_LASER_CTRL0);
+  write_reg(REG_LASER_CTRL0, laser_ctrl0 & 0xf0 );  
 }
 
 void adns::com_begin()
@@ -209,6 +224,8 @@ void adns::upload_firmware()
   }
 
   com_end();
+
+  delay(10);
 }
 
 void adns::dispRegisters(void)
@@ -250,6 +267,11 @@ void adns::dispRegisters(void)
 
 Vector adns::motion()
 {
+    if (capture_mode)
+    {
+      // In capture mode, we have no motion tracking.
+      return Vector(0, 0);
+    }
     read_motion_burst();
     return Vector(x * cpi_scale_factor, y * cpi_scale_factor);
 }
@@ -321,4 +343,63 @@ void adns::set_snap_angle(byte enable)
 {
     write_reg(REG_Snap_Angle, enable?0x80:0x00);
 }
+
+///// Capturing images from the sensor, per the datasheet:
+// 1. Reset the chip by writing 0x5a to Power_Up_Reset register (address 0x3a).
+// 2. Enable laser by setting Forced_Disable bit (Bit-0) of LASER_CTRL) register to 0.
+// {
+//     3. Write 0x93 to Frame_Capture register.
+//     4. Write 0xc5 to Frame_Capture register.
+//     5. Wait for two frames.
+//     6. Check for first pixel by reading bit zero of Motion register. If = 1, first pixel is available.
+//     7. Continue read from Pixel_Burst register until all 900 pixels are transferred.
+//     8. Continue step 3-7 to capture another frame.
+// }
+
+void adns::begin_image_capture()
+{
+  capture_mode = true;  
+
+  reset();
+  enable_laser();
+}
+
+void adns::read_image(uint8_t *pixels)
+{
+  if (!capture_mode)
+  {
+    // This only works after begin_image_capture has been called.
+    return;
+  }
+
+  write_reg(REG_Frame_Capture, 0x93 );
+  write_reg(REG_Frame_Capture, 0xc5 );
+
+  // I'm not sure how long "two frames" is. Trying this.
+  delayMicroseconds(100); 
+
+  // The bit in the datasheet about reading the Motion register doesn't seem to do anything useful.
+  // This appears to work.
+  com_begin();
+  byte avail = SPI.transfer(REG_Pixel_Burst & 0x7f);
+  delayMicroseconds(mcs_tSRAD);
+
+    for(int i = 0; i < 900; i++)
+    {
+        pixels[i] = SPI.transfer(REG_Pixel_Burst & 0x7F );
+        delayMicroseconds(15);
+    }
+
+  delayMicroseconds(mcs_tBEXIT);
+  com_end();
+}
+
+void adns::end_image_capture()
+{
+    // Just reinitialize the sensor and restore the previously set CPI.
+    int previous_cpi = current_cpi;
+    init();
+    set_cpi(previous_cpi);
+}
+
 
