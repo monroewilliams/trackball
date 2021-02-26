@@ -12,8 +12,10 @@
 // If this is set, look for an SSD1327 display on the i2c bus and use it to display the images from the sensors.
 // The display I'm using is one of these: https://www.adafruit.com/product/4741
 #define SENSOR_DISPLAY 0
-// If this is set, scale sensor data image for higher contrast using floating point math.
-#define SCALE_SENSOR_DATA 1
+// If this is 0, don't scale the sensor data.
+// If it's 1, scale using integer divide.
+// If it's 2, scale using floating point.
+#define SCALE_SENSOR_DATA 2
 
 #if SENSOR_DISPLAY
   #include <Adafruit_SSD1327.h>
@@ -211,6 +213,7 @@ void reset_display()
 void draw_sensor_pixels(int x, int y, uint8_t *pixels)
 {
 #if SCALE_SENSOR_DATA
+  uint8_t lut[256];
   // Scale the data to show maxumum contrast using the 16 gray levels available.
   // Scan the data and find the min and max pixel values
   uint8_t min = 255;
@@ -223,24 +226,63 @@ void draw_sensor_pixels(int x, int y, uint8_t *pixels)
   }
   // Scale the pixels so that the darkest gets value 0 and the brightest gets 15
   int range = max - min;
-  float scale = (range > 0)?(255.0 / range):1.0;
-  scale *= (15.0 / 255.0);
+  uint8_t offset = min;
+
+#if SCALE_SENSOR_DATA == 2
+  // use a floating point scale value
+  float scale = 1.0 / ((range > 0)?((range * 16) / 255.0):(16));
+  for(int i = min; i <=max; i++){
+    uint8_t color = (i - offset) * scale;
+    lut[i] = color | (color << 4);
+  }
+#else
+  // use integer divide
+  int divisor = (range > 0)?((range * 16)/ 255):16;
+  for(int i = min; i <=max; i++){
+    uint8_t color = (i - offset) / divisor;
+    if (color > 15) color = 15;
+    lut[i] = color | (color << 4);
+  }
 #endif
 
-  // I'm ashamed of this blit loop.
+#endif
+
+  // This blit converts 8 bit to 4 bit, and also expands the data 2x in x and y.
+
+  // Touch the pixels at the corners of this blit to update the dirty rect
+  display.drawPixel(x, y, 0);
+  display.drawPixel(x + 60, y + 60, 0);
+
+  uint8_t *buffer = display.getBuffer();
+  const int rowbytes = 64;
+  // Assumptions:
+  // X is even
+  // the blit does not need to be clipped
+  buffer += (rowbytes * y) + (x >> 1);
+
   int i = 0;
-  for(int ix = 0; ix < 30; ix++)
   for(int iy = 0; iy < 30; iy++)
   {
-    uint16_t color = pixels[i];
-#if SCALE_SENSOR_DATA
-    color = scale * (color - min);
-#else
-    color >>= 4;
-#endif
-    display.fillRect(x + (2 * ix), y + (2 * iy), 2, 2, color);
-    i++;
+    uint8_t *dst = buffer;
+    for(int ix = 0; ix < 30; ix++)
+    {
+      uint16_t color = pixels[i];
+  #if SCALE_SENSOR_DATA
+      color = lut[color];
+  #else
+      color >>= 4;
+      color |= color << 4;
+  #endif
+      // write two pixels at once, in two lines
+      dst[0] = color;
+      dst[rowbytes] = color;
+      dst++;
+      i++;
+    }
+    // move the buffer pointer down two rows
+    buffer += rowbytes << 1;
   }
+
 }
 
 void display_sensors()
