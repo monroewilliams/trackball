@@ -103,10 +103,10 @@ Adafruit_USBD_HID usb_hid;
   #define PIN_SENSOR_2_SELECT 19  
 #endif  
 
-#ifdef SEEED_XIAO_M0
-  // Pin assignments on Seeeduino XIAO:
+#if defined(SEEED_XIAO_M0) || defined(ARDUINO_QTPY_M0)
+  // Pin assignments on Seeeduino XIAO/Adafruit QT Py:
   // piezo speaker +
-  #define PIN_PIEZO 5
+  #define PIN_PIEZO 3
   // Mouse button inputs
   #define PIN_BUTTON_LEFT 0 
   #define PIN_BUTTON_RIGHT 1 
@@ -116,6 +116,10 @@ Adafruit_USBD_HID usb_hid;
   #define PIN_SENSOR_2_SELECT 6  
 #endif
 
+#if defined(PIN_NEOPIXEL)
+  #include <Adafruit_NeoPixel.h>
+  Adafruit_NeoPixel pixel(1, PIN_NEOPIXEL);
+#endif
 
 // Button state polling/tracking
 const char buttonNames[] = { MOUSE_BUTTON_LEFT, MOUSE_BUTTON_RIGHT, MOUSE_BUTTON_MIDDLE };
@@ -201,7 +205,15 @@ void setup()
 
   Serial.println(F("Opened serial port"));
 #endif
-    
+
+#if defined(PIN_NEOPIXEL)
+  pixel.begin();  // initialize the pixel
+
+  // and light it up
+  pixel.setPixelColor(0, 128, 0, 255);
+  pixel.show();
+#endif
+
   SPI.begin();
   
   s1.init();
@@ -228,7 +240,7 @@ void click()
 {
 #ifdef PIN_PIEZO
   // This is MUCH louder than just toggling the high/low once with digitalWrite().
-  tone(PIN_PIEZO, 2000, 5);
+  tone(PIN_PIEZO, 1500, 5);
 #endif
 }
 
