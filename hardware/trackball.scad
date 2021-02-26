@@ -165,12 +165,12 @@ module ball_cutout()
         sphere(d=50, $fa=5, $fs=0.1);
         sphere(d=ball_diameter + (ball_clearance * 2));
 
-        // clearance cut for ball removal
-        // The angle here isn't critical, it just needs to not look funny.
-        // roughly match the angle of the right cut
-        rotate([0, -45 , 40])
+        // clearance cut for ball removal, roughly matching the angle of the right front cut
+        // The angle here isn't critical, it just needs to not look funny,
+        // and not intersect the bearing cutouts (they have very tight tolerances)
+        rotate([0, -45 , 30])
         rotate([0, 90, 0])
-        cylinder(d=ball_diameter + (ball_clearance * 2), h=ball_diameter);
+        cylinder(d=ball_diameter + (ball_clearance), h=ball_diameter);
 
 
         // bottom hole
