@@ -381,13 +381,15 @@ void adns::read_image(uint8_t *pixels)
   // The bit in the datasheet about reading the Motion register doesn't seem to do anything useful.
   // This appears to work.
   com_begin();
-  byte avail = SPI.transfer(REG_Pixel_Burst & 0x7f);
+  // Reading a value from this register starts burst mode.
+  // The value of this first read seems to be garbage, so just discard it.
+  SPI.transfer(REG_Pixel_Burst & 0x7f);
   delayMicroseconds(mcs_tSRAD);
 
     for(int i = 0; i < 900; i++)
     {
         pixels[i] = SPI.transfer(REG_Pixel_Burst & 0x7F );
-        delayMicroseconds(15);
+        delayMicroseconds(5);
     }
 
   delayMicroseconds(mcs_tBEXIT);
