@@ -40,10 +40,10 @@ uint8_t const desc_hid_report[] =
         /* X, Y position [-127, 127] */ 
         HID_USAGE       ( HID_USAGE_DESKTOP_X                    ) ,
         HID_USAGE       ( HID_USAGE_DESKTOP_Y                    ) ,
-        HID_LOGICAL_MIN ( 0x81                                   ) ,
-        HID_LOGICAL_MAX ( 0x7f                                   ) ,
+        HID_LOGICAL_MIN_N ( SHRT_MIN, 2                          ) ,
+        HID_LOGICAL_MAX_N ( SHRT_MAX, 2                          ) ,
         HID_REPORT_COUNT( 2                                      ) ,
-        HID_REPORT_SIZE ( 8                                      ) ,
+        HID_REPORT_SIZE ( 16                                     ) ,
         HID_INPUT       ( HID_DATA | HID_VARIABLE | HID_RELATIVE ) ,
     HID_COLLECTION_END                                             , 
     HID_COLLECTION ( HID_COLLECTION_LOGICAL   )                    ,
@@ -369,8 +369,8 @@ void loop()
     typedef struct TU_ATTR_PACKED
     {
       uint8_t buttons;    /**< buttons mask for currently pressed buttons in the mouse. */
-      int8_t  x;          /**< Current delta x movement of the mouse. */
-      int8_t  y;          /**< Current delta y movement on the mouse. */
+      int16_t  x;          /**< Current delta x movement of the mouse. */
+      int16_t  y;          /**< Current delta y movement on the mouse. */
 #if USE_SCROLL_RESOLUTION_MULTIPLIER
       uint8_t  multiplier; /**< Mouse wheel resolution multiplier */
 #endif
@@ -381,8 +381,8 @@ void loop()
     report_t report =
     {
       .buttons = buttons,
-      .x       = int8_t(delta.x),
-      .y       = int8_t(delta.y),
+      .x       = int16_t(delta.x),
+      .y       = int16_t(delta.y),
 #if USE_SCROLL_RESOLUTION_MULTIPLIER
       .multiplier = uint8_t(scroll_tick - 1),
       .wheel   = int8_t(delta.z),
