@@ -248,43 +248,19 @@ void adns::dispRegisters(void)
 #endif
 }
 
-void adns::read_motion()
-{
-  byte xl = 0, yl = 0, xh = 0, yh = 0;
-
-  // Reading the Motion register freezes the X/Y values until it's read again.
-  byte mot = read_reg(REG_Motion);
-  
-  if (mot & 0x80)
-  {
-    // If this bit is set, there has been motion since the last report
-    xl = read_reg(REG_Delta_X_L);
-    xh = read_reg(REG_Delta_X_H);
-    yl = read_reg(REG_Delta_Y_L);
-    yh = read_reg(REG_Delta_Y_H);
-  }
-  
-  // Unfreeze the X/Y registers
-  read_reg(REG_Motion);
-  
-  // Assemble the bytes into ints
-  x = bytes2int(xh, xl);  
-  y = bytes2int(yh, yl);  
-}
-
 Vector adns::motion()
 {
-    read_motion();
+    read_motion_burst();
     return Vector(x * cpi_scale_factor, y * cpi_scale_factor);
 }
 
-// This doesn't work properly.  I'm not sure why.
 void adns::read_motion_burst()
 {
   byte burst[14];
   
   com_begin();
-  SPI.transfer(REG_Motion_Burst | 0x80 );
+  // Read the burst register to start the transfer
+  SPI.transfer(REG_Motion_Burst & 0x7F );
   delayMicroseconds(mcs_tSRAD);
   
   for (int i = 0; i < 14; i++)
@@ -319,6 +295,7 @@ void adns::read_motion_burst()
 
 void adns::set_cpi(int cpi)
 {
+    // Save the current CPI and calculate the divisor to use when reporting motion.
     current_cpi = cpi;
     cpi_scale_factor = report_cpi;
     cpi_scale_factor /= cpi;

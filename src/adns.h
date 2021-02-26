@@ -19,7 +19,6 @@ private:
     byte read_reg(byte reg_addr);
     void write_reg(byte reg_addr, byte data);
 
-    void read_motion();
     void read_motion_burst();
     void set_cpi(int cpi);
     void set_snap_angle(byte enable);    
