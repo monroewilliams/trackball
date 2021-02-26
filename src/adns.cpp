@@ -274,21 +274,29 @@ void adns::read_motion_burst()
   // Clear residual motion by writing the Motion register
   write_reg(REG_Motion, 0x00);
   
-  // Extract x and y
+  // Extract burst values
+  Motion = burst[0];
+  Observation = burst[1];
   x = bytes2int(burst[3], burst[2]);  
   y = bytes2int(burst[5], burst[4]);  
+  SQUAL = burst[6];
+  Pixel_Sum = burst[7];
+  Maximum_Pixel = burst[8];
+  Minimum_Pixel = burst[9];
+  Shutter = bytes2int(burst[10], burst[11]);
+  Frame_Period = bytes2int(burst[12], burst[13]);
 
 #if SERIAL_DEBUG
-    DebugLog(F("burst motion data:"));
-    for (int i = 0; i < 14; i++)
-    {
-      DebugLog(burst[i], HEX);
-      DebugLog(F(" "));
-    }
-    DebugLog(F(", x = "));
-    DebugLog(x);
-    DebugLog(F(", y = "));
-    DebugLogln(y);
+    // DebugLog(F("burst motion data:"));
+    // for (int i = 0; i < 14; i++)
+    // {
+    //   DebugLog(burst[i], HEX);
+    //   DebugLog(F(" "));
+    // }
+    // DebugLog(F(", x = "));
+    // DebugLog(x);
+    // DebugLog(F(", y = "));
+    // DebugLogln(y);
 #endif 
   
 }

@@ -8,6 +8,18 @@ public:
     // Polls the sensor and returns motion vector scaled to report_cpi
     Vector motion();
 
+    // All of these are filled in each time we do a burst motion read.
+    byte Motion;
+    byte Observation;
+    int x;
+    int y;
+    byte SQUAL;
+    byte Pixel_Sum;
+    byte Maximum_Pixel;
+    byte Minimum_Pixel;
+    int Shutter;
+    int Frame_Period;
+
 private:
     // The arduino pin number this chip's chip select is tied to.
     int ncs;
@@ -25,8 +37,6 @@ private:
 
     void dispRegisters(void);
 
-    int x;
-    int y;
     int current_cpi;
     int report_cpi;
     double cpi_scale_factor;
