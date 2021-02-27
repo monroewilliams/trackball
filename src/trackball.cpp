@@ -23,21 +23,23 @@
 // Only used if USE_CUSTOM_HID_DESCRIPTOR is also set to 1.
 #define USE_16_BIT_DELTAS 0
 
-// Look for an SSD1327 display on the i2c bus and use it to display the images from the sensors.
-// The display I'm using is one of these: https://www.adafruit.com/product/4741
+// These give the option to connect a display and toggle between regular operation and displaying the images from the sensors.
+// 0 - no display
+// 1 - SSD1327 display on the i2c bus  ( https://www.adafruit.com/product/4741 )
+// 2 - 128x128 SSD1351 on the SPI bus  ( https://www.amazon.com/gp/product/B07DB5YFGW )
 #define SENSOR_DISPLAY 0
-
-// If this is 0, don't scale the luminance of the sensor data.
-// If it's 1, scale using integer divide.
-// If it's 2, scale using floating point.
-// Only used if SENSOR_DISPLAY is also set to 1
-#define SCALE_SENSOR_LUMINANCE 2
 
 //
 ///////////////////////////////////////
 
-#if SENSOR_DISPLAY
+#if SENSOR_DISPLAY == 1
+  #define SENSOR_DISPLAY_GRAY4 1
+  #define SENSOR_DISPLAY_I2C 1
   #include <Adafruit_SSD1327.h>
+#elif SENSOR_DISPLAY == 2
+  #define SENSOR_DISPLAY_COLOR565 1
+  #define SENSOR_DISPLAY_SPI 1
+  #include <Adafruit_SSD1351.h>
 #endif
 
 // HID report descriptor using TinyUSB's template
@@ -215,35 +217,61 @@ const int scroll_tick = 64;
 float scroll_accum = 0;
 
 
+#if SENSOR_DISPLAY == 1
+  Adafruit_SSD1327 display(128, 128, &Wire, -1, 1000000UL);
+  const int display_address = SSD1327_I2C_ADDRESS;
+  const uint16_t text_color = SSD1327_WHITE;
+  const uint16_t text_bg = SSD1327_BLACK;
+#elif SENSOR_DISPLAY == 2
+  #define DC_PIN   4
+  #define CS_PIN   5
+  #define RST_PIN  -1
+  Adafruit_SSD1351 display = Adafruit_SSD1351(128, 128, &SPI, CS_PIN, DC_PIN, RST_PIN);
+  const uint16_t text_color = 0xFFFF;
+  const uint16_t text_bg = 0x0000;
+#endif
+
 #if SENSOR_DISPLAY
-Adafruit_SSD1327 display(128, 128, &Wire, -1, 1000000UL);
-const int display_address = SSD1327_I2C_ADDRESS;
 bool sensor_display_mode = false;
 bool display_ready = false;
 
 void reset_display()
 {
+#if defined(SENSOR_DISPLAY_GRAY4)
   display.clearDisplay();
+#elif defined(SENSOR_DISPLAY_COLOR565)
+  display.fillScreen(text_bg);
+#endif
   display.setTextSize(1);
   display.setTextWrap(true);
-  display.setTextColor(SSD1327_WHITE);
+  display.setTextColor(text_color, text_bg);
   display.setCursor(0,0);
   // Leave room for live updates
   display.print("\n\n\n\n");
   if (sensor_display_mode) {
     display.print(F("Press all 3 buttons\ntogether to return\nto trackball mode."));
+#if defined(SENSOR_DISPLAY_GRAY4)
     display.setContrast(0x7f);
+#endif
   } else {    
     display.print(F("Press all 3 buttons\ntogether to view \nsensor data."));
+#if defined(SENSOR_DISPLAY_GRAY4)
     display.setContrast(0x1f);
+#endif
   }
+#if defined(SENSOR_DISPLAY_GRAY4)
   display.display();
+#endif
 }
 
 void draw_sensor_pixels(int x, int y, uint8_t *pixels)
 {
-#if SCALE_SENSOR_LUMINANCE
+
+#if defined(SENSOR_DISPLAY_GRAY4)
   uint8_t lut[256];
+#elif defined(SENSOR_DISPLAY_COLOR565)
+  uint16_t lut[256];
+#endif
   // Scale the data to show maxumum contrast using the 16 gray levels available.
   // Scan the data and find the min and max pixel values
   uint8_t min = 255;
@@ -258,24 +286,12 @@ void draw_sensor_pixels(int x, int y, uint8_t *pixels)
   int range = max - min;
   uint8_t offset = min;
 
-#if SCALE_SENSOR_LUMINANCE == 2
-  // use a floating point scale value
-  float scale = 1.0 / ((range > 0)?((range * 16) / 255.0):(16));
+#if defined(SENSOR_DISPLAY_GRAY4)
+  float scale = 1.0 / ((range > 0)?(range / 255.0):1.0);
   for(int i = min; i <=max; i++){
     uint8_t color = (i - offset) * scale;
-    lut[i] = color | (color << 4);
+    lut[i] = (color >> 4) | (color & 0xf0);
   }
-#else
-  // use integer divide
-  int divisor = (range > 0)?((range * 16)/ 255):16;
-  for(int i = min; i <=max; i++){
-    uint8_t color = (i - offset) / divisor;
-    if (color > 15) color = 15;
-    lut[i] = color | (color << 4);
-  }
-#endif
-
-#endif
 
   // This blit converts 8 bit to 4 bit, and also expands the data 2x in x and y.
 
@@ -297,12 +313,7 @@ void draw_sensor_pixels(int x, int y, uint8_t *pixels)
     for(int ix = 0; ix < 30; ix++)
     {
       uint16_t color = pixels[i];
-  #if SCALE_SENSOR_LUMINANCE
       color = lut[color];
-  #else
-      color >>= 4;
-      color |= color << 4;
-  #endif
       // write two pixels at once, in two lines
       dst[0] = color;
       dst[rowbytes] = color;
@@ -312,6 +323,39 @@ void draw_sensor_pixels(int x, int y, uint8_t *pixels)
     // move the buffer pointer down two rows
     buffer += rowbytes << 1;
   }
+#elif defined(SENSOR_DISPLAY_COLOR565)
+  float scale = 1.0 / ((range > 0)?(range / 255.0):1.0);
+  for(int i = min; i <=max; i++){
+    uint16_t color = (i - offset) * scale;
+    lut[i] = display.color565(color, color, color);
+  }
+
+  // This blit converts 8 bit to 16 bit, and also expands the data 2x in x and y.
+  display.startWrite();
+  display.setAddrWindow(x, y, 60, 60);
+
+  int i = 0;
+  for(int iy = 0; iy < 30; iy++)
+  {
+    // write each line of pixels twice
+    for(int j = 0; j < 2; j++)
+    {
+      for(int ix = 0; ix < 30; ix++)
+      {
+        uint16_t color = pixels[i + ix];
+        color = lut[color];
+        // write each pixel twice
+        display.SPI_WRITE16(color);
+        display.SPI_WRITE16(color);
+        // NOTE: Using writePixels(uint16_t *colors, uint32_t len, bool block, bool bigEndian) here
+        // has the potential to be much more efficient, but on the processor I'm using that just uses a loop
+        // that does SPI_WRITE().
+      }
+    }
+    i += 30;
+  }
+  display.endWrite();
+#endif
 
 }
 
@@ -327,7 +371,9 @@ void display_sensors()
   unsigned long render2 = micros();
   draw_sensor_pixels(64, 64, pixels);
   unsigned long xfer = micros();
+#if defined(SENSOR_DISPLAY_GRAY4)
   display.display();
+#endif
   unsigned long end = micros();
 
   debugLogger.print(F("read took "));
@@ -360,7 +406,9 @@ void disable_sensor_display()
   s1.end_image_capture();
   s2.end_image_capture();
 }
+#endif
 
+#if defined(SENSOR_DISPLAY_I2C)
 bool i2c_probe_bus()
 {
   // Check to see whether it looks like there's anything connected to the SDA/SCL pins.
@@ -379,7 +427,6 @@ bool i2c_probe_device(byte address)
   Wire.beginTransmission(address);
   return (Wire.endTransmission() == 0);
 }
-
 #endif
 
 DebugLogger debugLogger;
@@ -475,7 +522,7 @@ void setup()
   debugLogger.println(F("Opened serial port"));
 #endif
 
-#if SENSOR_DISPLAY
+#if defined(SENSOR_DISPLAY_I2C)
   if (!i2c_probe_bus())
   {
     debugLogger.println(F("i2c bus appears disconnected"));
@@ -505,6 +552,11 @@ void setup()
       }
     }
   }
+#elif defined(SENSOR_DISPLAY_SPI) 
+  // Communication with the SPI display is one-way, so just assume it's going to be there.
+  display.begin();
+  display_ready = true;
+  reset_display();
 #endif
 
 #if defined(PIN_NEOPIXEL)
@@ -747,27 +799,36 @@ void loop()
   if (display_ready)
   {
     ////////
-    // This may be useful for debugging, but it brings us down to ~30hz.
-  //   display.fillRect(0, 0, 128, 16, 0);
-  //   display.setCursor(0,0);
-  //   display.println(delta);
-  //   display.print(F("loop time "));
-  //   display.print(loop_time / 1000);
-  //   display.print(F("ms"));
-  //   display.display();
+    // This may be useful for debugging, but it brings us down to ~30hz with the i2c display.
+#if 0
+    display.fillRect(0, 0, 128, 16, 0);
+    display.setCursor(0,0);
+    display.println(delta);
+    display.print(F("loop time "));
+    display.print(loop_time / 1000);
+    display.print(F("ms"));
+#if defined(SENSOR_DISPLAY_GRAY4)
+    display.display();
+#endif
+#endif
     ////////
     // Trying to diagnose an issue with kvm switching. This lets me see if the device resets on switch.
-    // static unsigned long last_uptime_seconds = 0;
-    // unsigned long uptime_seconds = millis() / 1000;
-    // if (uptime_seconds != last_uptime_seconds)
-    // {
-    //   last_uptime_seconds = uptime_seconds;
-    //   // Default font is 6x8
-    //   display.fillRect(0, 0, 8 * 6, 1 * 8, 0);
-    //   display.setCursor(0,0);
-    //   display.printf("%02d:%02d:%02d", uptime_seconds / 3600, (uptime_seconds / 60) % 60, (uptime_seconds) % 60);
-    //   display.display();
-    // }
+#if 0
+    static unsigned long last_uptime_seconds = 0;
+    unsigned long uptime_seconds = millis() / 1000;
+    if (uptime_seconds != last_uptime_seconds)
+    {
+      last_uptime_seconds = uptime_seconds;
+      // Default font is 6x8
+      display.fillRect(0, 0, 8 * 6, 1 * 8, 0);
+      display.setCursor(0,0);
+      display.printf("%02d:%02d:%02d", uptime_seconds / 3600, (uptime_seconds / 60) % 60, (uptime_seconds) % 60);
+#if defined(SENSOR_DISPLAY_GRAY4)
+      display.display();
+#endif
+    }
+#endif
+
   }
 #endif
 
