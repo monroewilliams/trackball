@@ -100,7 +100,7 @@ void adns::init ()
 
   enable_laser();
 
-  DebugLogln(F("Chip initialized"));
+  debugLogger.println(F("Chip initialized"));
 
   // By default, run the sensor at its maximum CPI value.  
   set_cpi(8200);
@@ -116,9 +116,9 @@ void adns::init ()
 
 void adns::reset()
 {
-  com_end(); // ensure that the serial port is reset
-  com_begin(); // ensure that the serial port is reset
-  com_end(); // ensure that the serial port is reset
+  com_end(); // ensure that the SPI port is reset
+  com_begin(); // ensure that the SPI port is reset
+  com_end(); // ensure that the SPI port is reset
   write_reg(REG_Power_Up_Reset, 0x5a); // force reset
   delay(50); // wait for it to reboot
 
@@ -169,10 +169,10 @@ byte adns::read_reg(byte reg_addr)
   // This is too spammy during normal use, but can be useful when debugging sensor issues.
   if (0)
   {
-      DebugLog(F("read register "));
-      DebugLog(reg_addr,HEX);
-      DebugLog(F(", value = "));
-      DebugLogln(data,HEX);
+      debugLogger.print(F("read register "));
+      debugLogger.print(reg_addr,HEX);
+      debugLogger.print(F(", value = "));
+      debugLogger.println(data,HEX);
   }
   
   return data;
@@ -196,7 +196,7 @@ void adns::upload_firmware()
 {  
 
   // send the firmware to the chip, cf p.18 of the datasheet
-//  DebugLogln(F("Uploading firmware..."));
+//  debugLogger.println(F("Uploading firmware..."));
   // set the configuration_IV register in 3k firmware mode
   write_reg(REG_Configuration_IV, 0x02); // bit 1 = 1 for 3k mode, other bits are reserved 
   
@@ -230,39 +230,40 @@ void adns::upload_firmware()
 
 void adns::dispRegisters(void)
 {
-#if SERIAL_DEBUG
-  typedef struct
+  if (debugLogger.enabled())
   {
-    int id;
-    const char *name;
-  } regInfo;
-  #define REG(x) { REG_##x, #x }
-  regInfo oreg[] = 
-  {
-    REG(Product_ID), 
-    REG(Inverse_Product_ID),
-    REG(SROM_ID),
-    REG(Motion), 
-    REG(Configuration_I), 
-    REG(Lift_Detection_Thr)
-  };
-  #undef REG
+    typedef struct
+    {
+      int id;
+      const char *name;
+    } regInfo;
+    #define REG(x) { REG_##x, #x }
+    regInfo oreg[] = 
+    {
+      REG(Product_ID), 
+      REG(Inverse_Product_ID),
+      REG(SROM_ID),
+      REG(Motion), 
+      REG(Configuration_I), 
+      REG(Lift_Detection_Thr)
+    };
+    #undef REG
 
-  byte regres;
+    byte regres;
 
-  for(unsigned int rctr=0; rctr<(sizeof(oreg)/sizeof(oreg[0])); rctr++)
-  {
-    regres = read_reg(oreg[rctr].id);
-    DebugLog(oreg[rctr].name);
-    DebugLog(" (0x");
-    DebugLog(oreg[rctr].id,HEX);
-    DebugLog(")\n  = 0x");
-    DebugLog(regres,HEX);  
-    DebugLog(" / 0b");
-    DebugLogln(regres,BIN);  
-    delay(1);
+    for(unsigned int rctr=0; rctr<(sizeof(oreg)/sizeof(oreg[0])); rctr++)
+    {
+      regres = read_reg(oreg[rctr].id);
+      debugLogger.print(oreg[rctr].name);
+      debugLogger.print(" (0x");
+      debugLogger.print(oreg[rctr].id,HEX);
+      debugLogger.print(")\n  = 0x");
+      debugLogger.print(regres,HEX);  
+      debugLogger.print(" / 0b");
+      debugLogger.println(regres,BIN);  
+      delay(1);
+    }
   }
-#endif
 }
 
 Vector adns::motion()
@@ -308,18 +309,19 @@ void adns::read_motion_burst()
   Shutter = bytes2int(burst[10], burst[11]);
   Frame_Period = bytes2int(burst[12], burst[13]);
 
-#if SERIAL_DEBUG
-    // DebugLog(F("burst motion data:"));
+  if (debugLogger.enabled())
+  {
+    // debugLogger.print(F("burst motion data:"));
     // for (int i = 0; i < 14; i++)
     // {
-    //   DebugLog(burst[i], HEX);
-    //   DebugLog(F(" "));
+    //   debugLogger.print(burst[i], HEX);
+    //   debugLogger.print(F(" "));
     // }
-    // DebugLog(F(", x = "));
-    // DebugLog(x);
-    // DebugLog(F(", y = "));
-    // DebugLogln(y);
-#endif 
+    // debugLogger.print(F(", x = "));
+    // debugLogger.print(x);
+    // debugLogger.print(F(", y = "));
+    // debugLogger.println(y);
+  }
   
 }
 
@@ -376,7 +378,7 @@ void adns::read_image(uint8_t *pixels)
   write_reg(REG_Frame_Capture, 0xc5 );
 
   // I'm not sure how long "two frames" is. Trying this.
-  delayMicroseconds(100); 
+  delayMicroseconds(1000); 
 
   // The bit in the datasheet about reading the Motion register doesn't seem to do anything useful.
   // This appears to work.
