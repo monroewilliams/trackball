@@ -9,25 +9,36 @@
 ////////////////////////////////////////
 // Various config options
 
-// Enable serial port debugging output
-#define SERIAL_DEBUG 0
+// This is the cpi we will report to the host. It's independent of the sensor's physical CPI.
+const int reported_cpi = 2400;
+
+// This is the frequency at which we poll sensors/buttons and send HID reports.
+const int report_Hz = 120;
 
 // Use a custom HID descriptor instead of TUD_HID_REPORT_DESC_MOUSE()
-#define USE_CUSTOM_HID_DESCRIPTOR 0
+#define USE_CUSTOM_HID_DESCRIPTOR 1
 
 // Use HID_USAGE_DESKTOP_RESOLUTION_MULTIPLIER to transmit higher-fidelity scroll reports.
 // Only used if USE_CUSTOM_HID_DESCRIPTOR is also set to 1.
 #define USE_SCROLL_RESOLUTION_MULTIPLIER 0
 
-// Use 16 bit fields for the X/Y deltas in the report.
+// Use 16 bit fields for the X/Y deltas in the report
 // Only used if USE_CUSTOM_HID_DESCRIPTOR is also set to 1.
-#define USE_16_BIT_DELTAS 0
+#define USE_16_BIT_DELTAS 1
+
+// Enable serial port debugging output
+#define SERIAL_DEBUG 0
 
 // These give the option to connect a display and toggle between regular operation and displaying the images from the sensors.
 // 0 - no display
 // 1 - SSD1327 display on the i2c bus  ( https://www.adafruit.com/product/4741 )
 // 2 - 128x128 SSD1351 on the SPI bus  ( https://www.amazon.com/gp/product/B07DB5YFGW )
 #define SENSOR_DISPLAY 0
+
+// Use this to start out in sensor display mode. 
+// Useful if you're just testing a sensor and don't have any buttons hooked up yet.
+// Only used if SENSOR_DISPLAY is non-zero
+#define SENSOR_DISPLAY_ON_STARTUP 0
 
 //
 ///////////////////////////////////////
@@ -167,10 +178,6 @@ const int buttonPins[] = { PIN_BUTTON_LEFT, PIN_BUTTON_RIGHT,  PIN_BUTTON_MIDDLE
 const int buttonCount = sizeof(buttonPins) / sizeof(buttonPins[0]);
 char buttons;
 
-// This is the cpi we want to report to the host.
-const int reported_cpi = 2400;
-// and the frequency at which we want to poll/report.
-const int report_Hz = 120;
 const int report_microseconds = 1000000 / report_Hz;
 
 // The coordinate system here is a bit wonky -- in the final HID report, +X points right and +Y points "down" (towards the user),
@@ -185,7 +192,7 @@ const int report_microseconds = 1000000 / report_Hz;
 #define S2A (270 + 45)
 #define S2E 30
 
-// TODO: make a transform out of the azimuth/elevation constants.
+// TODO: build a transform from the azimuth/elevation constants.
 
 // The sensor transform
 // Note that the sensor orientation I've been using all along is actually "sideways", for mechanical reasons
@@ -196,12 +203,11 @@ float st[3][4] =
 #if 1
   // This is the "hack" transform I've been using for the new sensor location 
   // (s1 at 180, s2 at  270 + 45, both at 30 degrees elevation)
-  {  1,        0,        sqrtf(2.0),  0   },  // X is s2.x, scaled up a bit, with s1.x subtracted to compensate for s2 being off-axis
-  { -1,        0,        0,           0   },  // Y is s1.x
-  {  0,        0.5,      0,           0.5 }   // Z is the average of the two sensors' y components.
+  { -1,        0,       -sqrtf(2.0),  0   },  // X is s2.x, scaled up a bit, with s1.x subtracted to compensate for s2 being off-axis
+  {  1,        0,        0,           0   },  // Y is s1.x
+  {  0,       -0.5,      0,          -0.5 }   // Z is the average of the two sensors' y components.
 #else
   // This was the transform for the original sensor location (s1 at 180 and s2 at 270, at zero elevation)
-  // The sensors were also inverted here (i.e. the part where the wires attach was at the bottom instead of the top)
   {  0,        0,       -1,     0   },    // X is the inverse of the direct x reading of s2
   {  1,        0,        0,     0   },    // Y is the direct x reading of s1
   {  0,       -0.5,      0,    -0.5  }    // Z is the average of the two sensors' y components.
@@ -223,10 +229,10 @@ float scroll_accum = 0;
   const uint16_t text_color = SSD1327_WHITE;
   const uint16_t text_bg = SSD1327_BLACK;
 #elif SENSOR_DISPLAY == 2
-  #define DC_PIN   4
-  #define CS_PIN   5
-  #define RST_PIN  -1
-  Adafruit_SSD1351 display = Adafruit_SSD1351(128, 128, &SPI, CS_PIN, DC_PIN, RST_PIN);
+  #define DISPLAY_DC_PIN   4
+  #define DISPLAY_CS_PIN   5
+  #define DISPLAY_RST_PIN  -1
+  Adafruit_SSD1351 display = Adafruit_SSD1351(128, 128, &SPI, DISPLAY_CS_PIN, DISPLAY_DC_PIN, DISPLAY_RST_PIN);
   const uint16_t text_color = 0xFFFF;
   const uint16_t text_bg = 0x0000;
 #endif
@@ -264,7 +270,7 @@ void reset_display()
 #endif
 }
 
-void draw_sensor_pixels(int x, int y, uint8_t *pixels)
+void draw_sensor_pixels(int x, int y, uint8_t *pixels, int width, int height, size_t src_rowbytes, bool zoom)
 {
 
 #if defined(SENSOR_DISPLAY_GRAY4)
@@ -288,16 +294,17 @@ void draw_sensor_pixels(int x, int y, uint8_t *pixels)
 
 #if defined(SENSOR_DISPLAY_GRAY4)
   float scale = 1.0 / ((range > 0)?(range / 255.0):1.0);
-  for(int i = min; i <=max; i++){
+  for(int i = min; i <=max; i++)
+  {
     uint8_t color = (i - offset) * scale;
     lut[i] = (color >> 4) | (color & 0xf0);
   }
 
-  // This blit converts 8 bit to 4 bit, and also expands the data 2x in x and y.
+  // This blit converts 8 bit to 4 bit, and also optionally expands the data 2x in x and y.
 
   // Touch the pixels at the corners of this blit to update the dirty rect
   display.drawPixel(x, y, 0);
-  display.drawPixel(x + 59, y + 59, 0);
+  display.drawPixel(x + ((zoom?2:1) * width) - 1, y + ((zoom?2:1) * width) - 1, 0);
 
   uint8_t *buffer = display.getBuffer();
   const int rowbytes = 64;
@@ -306,22 +313,34 @@ void draw_sensor_pixels(int x, int y, uint8_t *pixels)
   // the blit does not need to be clipped
   buffer += (rowbytes * y) + (x >> 1);
 
-  int i = 0;
-  for(int iy = 0; iy < 30; iy++)
+  for(int iy = 0; iy < height; iy++)
   {
     uint8_t *dst = buffer;
-    for(int ix = 0; ix < 30; ix++)
+    if (zoom)
     {
-      uint16_t color = pixels[i];
-      color = lut[color];
-      // write two pixels at once, in two lines
-      dst[0] = color;
-      dst[rowbytes] = color;
-      dst++;
-      i++;
+      for(int ix = 0; ix < width; ix++)
+      {
+        uint16_t color = lut[pixels[ix]];
+        // write two pixels at once, in two lines
+        dst[0] = color;
+        dst[rowbytes] = color;
+        dst++;
+      }
+    } 
+    else 
+    {
+      for(int ix = 0; ix < width; ix += 2)
+      {
+        uint16_t color = (lut[pixels[ix]] & 0xf0) | (lut[pixels[ix+1]] >> 4);
+        // write two pixels at once, in two lines
+        dst[0] = color;
+        dst++;
+      }
+
     }
-    // move the buffer pointer down two rows
-    buffer += rowbytes << 1;
+    // move the buffer pointer down one or two rows
+    buffer += rowbytes << (zoom?1:0);
+    pixels += src_rowbytes;
   }
 #elif defined(SENSOR_DISPLAY_COLOR565)
   float scale = 1.0 / ((range > 0)?(range / 255.0):1.0);
@@ -330,29 +349,37 @@ void draw_sensor_pixels(int x, int y, uint8_t *pixels)
     lut[i] = display.color565(color, color, color);
   }
 
-  // This blit converts 8 bit to 16 bit, and also expands the data 2x in x and y.
+  // This blit converts 8 bit to 16 bit, and also optionally expands the data 2x in x and y.
   display.startWrite();
-  display.setAddrWindow(x, y, 60, 60);
+  display.setAddrWindow(x, y, width * (zoom?2:1), height * (zoom?2:1));
 
-  int i = 0;
-  for(int iy = 0; iy < 30; iy++)
+  for(int iy = 0; iy < height; iy++)
   {
-    // write each line of pixels twice
-    for(int j = 0; j < 2; j++)
-    {
-      for(int ix = 0; ix < 30; ix++)
+    if (zoom)
+    {    
+      // write each line of pixels twice
+      for(int j = 0; j < 2; j++)
       {
-        uint16_t color = pixels[i + ix];
-        color = lut[color];
-        // write each pixel twice
-        display.SPI_WRITE16(color);
-        display.SPI_WRITE16(color);
-        // NOTE: Using writePixels(uint16_t *colors, uint32_t len, bool block, bool bigEndian) here
-        // has the potential to be much more efficient, but on the processor I'm using that just uses a loop
-        // that does SPI_WRITE().
+        for(int ix = 0; ix < width; ix++)
+        {
+          uint16_t color = lut[pixels[ix]];
+          // write each pixel twice
+          display.SPI_WRITE16(color);
+          display.SPI_WRITE16(color);
+        }
       }
     }
-    i += 30;
+    else
+    {
+      // write each line of pixels once
+      for(int ix = 0; ix < width; ix++)
+      {
+        uint16_t color = lut[pixels[ix]];
+        display.SPI_WRITE16(color);
+      }
+
+    }
+    pixels += src_rowbytes;
   }
   display.endWrite();
 #endif
@@ -361,15 +388,26 @@ void draw_sensor_pixels(int x, int y, uint8_t *pixels)
 
 void display_sensors()
 {
-  uint8_t pixels[900];
+  // Largest known sensor image is 36 pixels square
+  uint8_t pixels[36 * 36];
+  // This reads the pixels off of both sensors, and draws them in the lower left and lower right corners of the display.
+  // If there's room to do so without them overlapping, it magnifies both images by 2x.
+  // If not, it only magnifies the one from s1.
   unsigned long read1 = micros();
+  int width1 = s1.image_width();
+  int height1 = s1.image_height();
   s1.read_image(pixels);
   unsigned long render1 = micros();
-  draw_sensor_pixels(0, 64, pixels);
+  draw_sensor_pixels(0, 128 - (height1 * 2), pixels, width1, height1, width1, true);
   unsigned long read2 = micros();
+  int width2 = s2.image_width();
+  int height2 = s2.image_height();
   s2.read_image(pixels);
   unsigned long render2 = micros();
-  draw_sensor_pixels(64, 64, pixels);
+  bool zoom = (width1 * 2) + (width2 * 2) < 128;
+  int x2 = 128 - (width2 * (zoom?2:1));
+  int y2 = 128 - (height2 * (zoom?2:1));
+  draw_sensor_pixels(x2, y2, pixels, width2, height2, width2, zoom);
   unsigned long xfer = micros();
 #if defined(SENSOR_DISPLAY_GRAY4)
   display.display();
@@ -517,9 +555,36 @@ void setup()
   // while (!Serial);
 
   // Add a short delay so I can get the console open before things start happening.
-  delay(3000);
+  delay(2000);
 
   debugLogger.println(F("Opened serial port"));
+#endif
+
+  // disable the chip-select pins for both sensors (chip select is active-low)
+  pinMode (PIN_SENSOR_1_SELECT, OUTPUT);
+  digitalWrite(PIN_SENSOR_1_SELECT, HIGH);
+  pinMode (PIN_SENSOR_2_SELECT, OUTPUT);
+  digitalWrite(PIN_SENSOR_2_SELECT, HIGH);
+#if defined(DISPLAY_CS_PIN) 
+  // also, disable chip-select for an SPI display if we're using one.
+  pinMode (DISPLAY_CS_PIN, OUTPUT);
+  digitalWrite(DISPLAY_CS_PIN, HIGH);
+#endif
+
+  SPI.begin();
+  debugLogger.println(F("Initializing sensor 1:"));
+  s1.init();
+  debugLogger.println(F("Initializing sensor 2:"));
+  s2.init();
+  
+  for(int i=0; i<buttonCount; i++)
+  {
+      pinMode(buttonPins[i], INPUT_PULLUP);
+  }
+
+#ifdef PIN_PIEZO
+  // Piezo output
+  pinMode(PIN_PIEZO, OUTPUT);
 #endif
 
 #if defined(SENSOR_DISPLAY_I2C)
@@ -567,23 +632,11 @@ void setup()
   pixel.show();
 #endif
 
-  SPI.begin();
-  
-  s1.init();
-  s2.init();
-    
-  for(int i=0; i<buttonCount; i++)
-  {
-      pinMode(buttonPins[i], INPUT_PULLUP);
-  }
+  debugLogger.println(F("Initialization complete."));
 
-#ifdef PIN_PIEZO
-  // Piezo output
-  pinMode(PIN_PIEZO, OUTPUT);
+#if SENSOR_DISPLAY && SENSOR_DISPLAY_ON_STARTUP
+  set_sensor_display(true);
 #endif
-
-debugLogger.println(F("Initialization complete."));
-
 }
 
 void click()
@@ -619,6 +672,16 @@ void loop()
     Vector v1 = s1.motion();
     Vector v2 = s2.motion();
     
+    // Given the way my design mounts the sensors (with the wire attachment at the top), the 9800 is inverted relative to the others.
+    if (s1.sensor_type() == adns::PID_adns9800)
+    {
+      v1 = -v1;
+    }
+    if (s2.sensor_type() == adns::PID_adns9800)
+    {
+      v2 = -v2;
+    }
+
     if (v1.x != 0 || v1.y != 0 || v2.x != 0 || v2.y != 0)
     {
       // The sensor reported movement.
@@ -820,7 +883,6 @@ void loop()
     {
       last_uptime_seconds = uptime_seconds;
       // Default font is 6x8
-      display.fillRect(0, 0, 8 * 6, 1 * 8, 0);
       display.setCursor(0,0);
       display.printf("%02d:%02d:%02d", uptime_seconds / 3600, (uptime_seconds / 60) % 60, (uptime_seconds) % 60);
 #if defined(SENSOR_DISPLAY_GRAY4)

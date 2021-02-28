@@ -5,10 +5,9 @@
 // Firmware "adns9800_srom_A6.txt" from https://github.com/mrjohnk/ADNS-9800/tree/master/Alternate%20Firmware
 // This firmware is Copyright Avago, please refer to them concerning modifications.
 
-unsigned short firmware_length = 3070;
+unsigned short firmware_length_adns9800 = 3070;
 
-
-const uint8_t PROGMEM firmware_data[] = {
+const uint8_t PROGMEM firmware_data_adns9800[] = {
 0x03,
 0xa6,
 0x68,

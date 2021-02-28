@@ -5,8 +5,12 @@
 #include "Vector.h"
 #include "adns.h"
 
-// This defines firmware_length and firmware_data
-#include "ADNS9800_firmware.h"
+#ifdef ADNS_SUPPORT_ADNS9800
+  #include "ADNS9800_firmware.h"
+#endif
+#ifdef ADNS_SUPPORT_PMW3360DM
+  #include "PMW3360DM_firmware.h"
+#endif
 
 
 // Registers
@@ -25,10 +29,12 @@ enum
   REG_Minimum_Pixel                        = 0x0a,
   REG_Shutter_Lower                        = 0x0b,
   REG_Shutter_Upper                        = 0x0c,
-  REG_Frame_Period_Lower                   = 0x0d,
-  REG_Frame_Period_Upper                   = 0x0e,
+  REG_Control                              = 0x0d,    // PMW3360DM only
+  REG_Frame_Period_Lower                   = 0x0d,    // ADNS-9800 only
+  REG_Frame_Period_Upper                   = 0x0e,    // ADNS-9800 only
   REG_Configuration_I                      = 0x0f,
   REG_Configuration_II                     = 0x10,
+  REG_Angle_Tune                           = 0x11,    // PMW3360DM only
   REG_Frame_Capture                        = 0x12,
   REG_SROM_Enable                          = 0x13,
   REG_Run_Downshift                        = 0x14,
@@ -43,7 +49,7 @@ enum
   REG_Frame_Period_Min_Bound_Upper         = 0x1d,
   REG_Shutter_Max_Bound_Lower              = 0x1e,
   REG_Shutter_Max_Bound_Upper              = 0x1f,
-  REG_LASER_CTRL0                          = 0x20,
+  REG_LASER_CTRL0                          = 0x20,    // ADNS-9800 only
   REG_Observation                          = 0x24,
   REG_Data_Out_Lower                       = 0x25,
   REG_Data_Out_Upper                       = 0x26,
@@ -60,7 +66,6 @@ enum
   REG_Pixel_Burst                          = 0x64,
 };
 
-
 // Delay times from the datasheet, in microseconds
 enum
 {
@@ -74,6 +79,13 @@ enum
     mcs_tBEXIT = 1,           // NCS inactive after motion burst (actually 500 nanoseconds)
 };
 
+enum
+{
+  chip_state_uninitialized = 0,
+  chip_state_motion = 1,
+  chip_state_image_capture = 2
+};
+
 static inline int bytes2int(byte h, byte l)
 {
   int result = (int8_t)h;
@@ -85,25 +97,50 @@ static inline int bytes2int(byte h, byte l)
   adns::adns(int ncs, int report_cpi)
       : ncs(ncs), report_cpi(report_cpi)
   {
-    capture_mode = false;
+    chip_state = chip_state_uninitialized;
+    product_id = PID_unknown;
   }
 
 
-void adns::init ()
+bool adns::init ()
 {
   pinMode (ncs, OUTPUT);
+  chip_state = chip_state_uninitialized;
 
   reset();
 
+  // Read the product ID, so we know which firmware to use.
+  product_id = read_reg(REG_Product_ID);
+  debugLogger.print(F("Read product id: 0x"));
+  debugLogger.println(product_id, HEX);
+  delay(1);
+
   // upload the firmware
-  upload_firmware();
+  if (!upload_firmware())
+  {
+    return false;
+  }
 
   enable_laser();
 
   debugLogger.println(F("Chip initialized"));
 
   // By default, run the sensor at its maximum CPI value.  
-  set_cpi(8200);
+  switch(product_id)
+  {
+    case PID_adns9800:
+      set_cpi(8200);
+    break;
+    case PID_pmw3360dm:
+      set_cpi(12000);
+    break;
+    case PID_pmw3389dm:
+      set_cpi(16000);
+    break;
+    default:
+    break;
+  }
+
 
   delay(1);
   
@@ -111,7 +148,9 @@ void adns::init ()
   
   delay(100);
 
-  capture_mode = false;
+  chip_state = chip_state_motion;
+
+  return true;
 }
 
 void adns::reset()
@@ -128,21 +167,27 @@ void adns::reset()
   read_reg(REG_Delta_X_H);
   read_reg(REG_Delta_Y_L);
   read_reg(REG_Delta_Y_H);
+
+  delay(50);
 }
 
 void adns::enable_laser()
 {
-  // enable laser(bit 0 = 0b), in normal mode (bits 3,2,1 = 000b)
-  // reading the actual value of the register is important because the real
-  // default value is different from what is said in the datasheet, and if you
-  // change the reserved bytes (like by writing 0x00...) it would not work.
-  byte laser_ctrl0 = read_reg(REG_LASER_CTRL0);
-  write_reg(REG_LASER_CTRL0, laser_ctrl0 & 0xf0 );  
+  // This is only necessary on the 9800
+  if (product_id == PID_adns9800)
+  {
+    // enable laser(bit 0 = 0b), in normal mode (bits 3,2,1 = 000b)
+    // reading the actual value of the register is important because the real
+    // default value is different from what is said in the datasheet, and if you
+    // change the reserved bytes (like by writing 0x00...) it would not work.
+    byte laser_ctrl0 = read_reg(REG_LASER_CTRL0);
+    write_reg(REG_LASER_CTRL0, laser_ctrl0 & 0xf0 );  
+  }
 }
 
-void adns::com_begin()
+void adns::com_begin(uint32_t clock)
 {
-  SPI.beginTransaction(SPISettings(2000000, MSBFIRST, SPI_MODE3));
+  SPI.beginTransaction(SPISettings(clock, MSBFIRST, SPI_MODE3));
   digitalWrite(ncs, LOW);
 }
 
@@ -192,13 +237,39 @@ void adns::write_reg(byte reg_addr, byte data)
   delayMicroseconds(mcs_tSWW - mcs_tSCLK_NCS_write); // Could be shortened, but is looks like a safe lower bound 
 }
 
-void adns::upload_firmware()
+bool adns::upload_firmware()
 {  
-
   // send the firmware to the chip, cf p.18 of the datasheet
-//  debugLogger.println(F("Uploading firmware..."));
-  // set the configuration_IV register in 3k firmware mode
-  write_reg(REG_Configuration_IV, 0x02); // bit 1 = 1 for 3k mode, other bits are reserved 
+
+  unsigned short firmware_length;
+  const uint8_t *firmware_data;
+  switch(product_id)
+  {
+#ifdef ADNS_SUPPORT_ADNS9800
+    case PID_adns9800:
+      debugLogger.println(F("Uploading ADNS-9800 firmware"));
+      firmware_length = firmware_length_adns9800;
+      firmware_data = firmware_data_adns9800;
+
+      // set the configuration_IV register in 3k firmware mode
+      write_reg(REG_Configuration_IV, 0x02); // bit 1 = 1 for 3k mode, other bits are reserved 
+    break;
+#endif
+#ifdef ADNS_SUPPORT_PMW3360DM
+    case PID_pmw3360dm:
+      debugLogger.println(F("Uploading PMW3360DM firmware"));
+      firmware_length = firmware_length_pmw3360dm;
+      firmware_data = firmware_data_pmw3360dm;
+
+      // Write 0 to Rest_En bit of Config2 register to disable Rest mode.
+      write_reg(REG_Configuration_II, 0x20);
+    break;
+#endif
+    default:
+      debugLogger.println(F("*** No firmware available for this chip! ***"));
+      return false;
+    break;
+  }
   
   // write 0x1d in SROM_enable reg for initializing
   write_reg(REG_SROM_Enable, 0x1d); 
@@ -226,6 +297,23 @@ void adns::upload_firmware()
   com_end();
 
   delay(10);
+
+  switch(product_id)
+  {
+    case PID_pmw3360dm:
+      // Read the SROM_ID register to verify the ID before any other register reads or writes.
+      read_reg(REG_SROM_ID);
+
+      // Write 0x00 to Config2 register for wired mouse or 0x20 for wireless mouse design.
+      write_reg(REG_Configuration_II, 0x00);
+
+      // set initial CPI resolution
+      // We do this later, using set_cpi().
+      // write_reg(REG_Configuration_I, 0x15);
+    break;
+  }
+
+  return true;
 }
 
 void adns::dispRegisters(void)
@@ -268,7 +356,7 @@ void adns::dispRegisters(void)
 
 Vector adns::motion()
 {
-    if (capture_mode)
+    if (chip_state != chip_state_motion)
     {
       // In capture mode, we have no motion tracking.
       return Vector(0, 0);
@@ -309,19 +397,19 @@ void adns::read_motion_burst()
   Shutter = bytes2int(burst[10], burst[11]);
   Frame_Period = bytes2int(burst[12], burst[13]);
 
-  if (debugLogger.enabled())
-  {
-    // debugLogger.print(F("burst motion data:"));
-    // for (int i = 0; i < 14; i++)
-    // {
-    //   debugLogger.print(burst[i], HEX);
-    //   debugLogger.print(F(" "));
-    // }
-    // debugLogger.print(F(", x = "));
-    // debugLogger.print(x);
-    // debugLogger.print(F(", y = "));
-    // debugLogger.println(y);
-  }
+  // if (debugLogger.enabled())
+  // {
+  //   debugLogger.print(F("burst motion data:"));
+  //   for (int i = 0; i < 14; i++)
+  //   {
+  //     debugLogger.print(burst[i], HEX);
+  //     debugLogger.print(F(" "));
+  //   }
+  //   debugLogger.print(F(", x = "));
+  //   debugLogger.print(x);
+  //   debugLogger.print(F(", y = "));
+  //   debugLogger.println(y);
+  // }
   
 }
 
@@ -346,6 +434,34 @@ void adns::set_snap_angle(byte enable)
     write_reg(REG_Snap_Angle, enable?0x80:0x00);
 }
 
+int adns::image_width()
+{
+  int result = 0;
+  switch(product_id)
+  {
+    case PID_adns9800:
+      result = 30;
+    break;
+    case PID_pmw3360dm:
+      result = 36;
+    break;
+    default:
+    break;
+  }
+  return result;  
+}
+int adns::image_height()
+{
+  // All known sensors return square images.
+  return image_width();
+}
+
+size_t adns::image_data_size()
+{
+  return image_width() * image_height();
+}
+
+
 ///// Capturing images from the sensor, per the datasheet:
 // 1. Reset the chip by writing 0x5a to Power_Up_Reset register (address 0x3a).
 // 2. Enable laser by setting Forced_Disable bit (Bit-0) of LASER_CTRL) register to 0.
@@ -360,19 +476,21 @@ void adns::set_snap_angle(byte enable)
 
 void adns::begin_image_capture()
 {
-  capture_mode = true;  
 
   reset();
   enable_laser();
+  chip_state = chip_state_image_capture;
 }
 
 void adns::read_image(uint8_t *pixels)
 {
-  if (!capture_mode)
+  if (chip_state != chip_state_image_capture)
   {
     // This only works after begin_image_capture has been called.
     return;
   }
+
+  size_t datasize = image_data_size();
 
   write_reg(REG_Frame_Capture, 0x93 );
   write_reg(REG_Frame_Capture, 0xc5 );
@@ -380,18 +498,21 @@ void adns::read_image(uint8_t *pixels)
   // I'm not sure how long "two frames" is. Trying this.
   delayMicroseconds(1000); 
 
-  // The bit in the datasheet about reading the Motion register doesn't seem to do anything useful.
-  // This appears to work.
-  com_begin();
+  // The bit in the adns9800 datasheet about reading the Motion register doesn't seem to do anything useful.
+  // I suspect it may be a mis-print. This code works on the hardware I have (both adns9800 and pmw3360)
+
+  // Bump up the SPI speed a bit for this transaction, since there's a fair bit of data to move.
+  com_begin(8000000);
+
   // Reading a value from this register starts burst mode.
   // The value of this first read seems to be garbage, so just discard it.
   SPI.transfer(REG_Pixel_Burst & 0x7f);
   delayMicroseconds(mcs_tSRAD);
 
-    for(int i = 0; i < 900; i++)
+    for(size_t i = 0; i < datasize; i++)
     {
         pixels[i] = SPI.transfer(REG_Pixel_Burst & 0x7F );
-        delayMicroseconds(5);
+        delayMicroseconds(10);
     }
 
   delayMicroseconds(mcs_tBEXIT);
