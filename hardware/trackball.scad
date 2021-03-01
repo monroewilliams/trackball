@@ -811,7 +811,7 @@ module body()
     }
 
 }
-module body_unclipped()
+module body_unclipped(include_button_supports = true)
 {
     difference()
     {
@@ -826,7 +826,10 @@ module body_unclipped()
                 body_right_cut();
             }        
  
-            body_button_supports();
+            if (include_button_supports)
+            {
+                body_button_supports();
+            }
 
             sensor_shells();
         }
@@ -867,7 +870,7 @@ stud_locations = [
     [-39, -27],
 ];
 
-module bottom_cover(thickness)
+module bottom_cover(thickness, include_button_supports = false)
 {
     union()
     {
@@ -877,7 +880,7 @@ module bottom_cover(thickness)
             {
                 difference()
                 {
-                    body_unclipped();
+                    body_unclipped(include_button_supports);
                     ball_cutout();
                 }
             }
