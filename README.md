@@ -1,28 +1,18 @@
 # README #
 
-This is the code to run a trackball I'm building for myself.  The original hardware it was built around was a Sparkfun Pro Micro:
+This is the code to run a trackball I'm building for myself.<br>
 
-https://www.sparkfun.com/products/12587
+It's currently based around either a [Seeeduino XIAO](https://wiki.seeedstudio.com/Seeeduino-XIAO/) or the very similar [Adafruit QT Py](https://www.adafruit.com/product/4600), and a couple of optical mouse sensor breakout boards. I've built two so far, one using [these ADNS-9800 boards](https://www.tindie.com/products/jkicklighter/adns-9800-optical-laser-sensor/), and one using [these PMW3360 breakout boards](https://www.tindie.com/products/jkicklighter/pmw3360-motion-sensor/).<br>
 
-but I've currently switched over to a Seeeduino XIAO:
+I started this project because my favorite ergonomic trackball, the Trackman Marble FX, is basically no longer viable. I really like the shape of it, but it's PS/2 only, has a number of issues with tracking and durability, and has become really hard to find/expensive. I have a small collection of them, most of which have broken over the years.<br>
 
-https://wiki.seeedstudio.com/Seeeduino-XIAO/
+I decided to build my own trackball with a shape that fits my hand similar to the old Trackman Marble FX, and incorporated a feature from the Kensington Slimblade (probably my second favorite, although not for its ergonomics): twisting the ball in the Z axis acts like a scroll-wheel (complete with clicky sounds produced by a piezo speaker).<br>
 
-and two ADNS-9800 laser optical mouse sensors, which I got from here (including breakout boards and lenses):
+To be able to sense rotation in all three axes, it needs to use two mouse sensors, positioned at different points around the ball. <br>
 
-https://www.tindie.com/products/jkicklighter/adns-9800-optical-laser-sensor/
+I'm quite happy with the current state of the project. I prefer using this trackball to any other I've used at this point, which is saying something. :)
 
-original kickstarter link for the breakout boards is here:
-
-https://www.kickstarter.com/projects/1034145369/high-speed-laser-optical-sensor
-
-This code is derived from the code written by the fellow who created the breakout boards.  The firmware files for the sensor, in particular, are taken directly from here:
-
-https://github.com/mrjohnk/ADNS-9800
-
-I've refactored the code substantially, set it up to be able to run two of the sensors (since I'm trying to emulate the "twist-to-scroll" behavior of the Kensington Slimblade, two sensors were necessary), and tweaked the sensitivity, etc. to my taste.
-
-This code may be used for any purpose.  If you post or release something derived from this code, I'd appreciate it if you included a link to this repository and/or mrjohnk's original github repository.
+The [hardware](hardware) directory contains the OpenSCAD files for the printed plastics. The [src](src) directory has the code.
 
 # BUILD #
 

@@ -14,7 +14,8 @@ Other components I'm using in the build:
 
 https://wiki.seeedstudio.com/Seeeduino-XIAO/
 
-The Adafruit QT Py is very similar (with the same pinout and processor) and should work with minimal changes to the code. It has a couple of niceties over the XIAO, including an actual reset button and an RGB LED that could be used to light things up.
+I've also swapped in an Adafruit QT Py (it's very similar with the same pinout and processor). It has a couple of niceties over the XIAO, including an actual reset button and an RGB LED that could be used to light things up. <br>
+I'm currently having some issues with it not dealing well with switching inputs on my KVM switch (it stops getting HID reports to the host and I don't know why), so be aware of that.
 
 https://www.adafruit.com/product/4600
 
@@ -26,8 +27,8 @@ and have since picked up two PMW3360 optical mouse sensor breakouts from here:
 
 https://www.tindie.com/products/jkicklighter/pmw3360-motion-sensor/
 
-The plastics have options to use either kind, or even one of each. I'm working on adding support for the PMW3360 to the code.<br>
-It looks like the PMW3389 breakout from the same source would also fit the plastics, although I'd have to add support for it in the code:
+The plastics have options to use either kind (or even one of each), and the code also supports both kinds.<br>
+It looks like the PMW3389 breakout from the same source would also fit the plastics. The code doesn't yet support it, but it looks like adding support for it in the code would be pretty trivial.
 
 https://www.tindie.com/products/jkicklighter/pmw3389-motion-sensor/
 
@@ -44,6 +45,11 @@ or:
 The Kensington Slimblade and Kensington Expert Mouse trackballs use this size, as does the Perixx Periboard combination keyboard/trackball. Perixx sells a compatible replacement ball, which is a good way to get one without buying extra hardware you don't need:
 
 https://www.amazon.com/gp/product/B07DXBMT6Z/
+
+1 - USB-C cable with a relatively small connector. There's not a lot of room under the printed shell for the cable plug.<br>
+I've modeled a channel for the cable to run out the front of the body, but I haven't yet found a cable that can plug into the microcontroller and make the turn to get into the channel, which is why the cable currently sticks out the side. I may eventually switch to a processor that has solder-pads for the USB connection, or hack together a cable with a solder-on USB-C plug, but for now I'm using one of these:
+
+https://www.amazon.com/gp/product/B081F1VR6W/
 
 1 - Standard mini breadboard (170 tie point version), available through many sources:
 
