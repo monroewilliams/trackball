@@ -10,7 +10,7 @@ I started this project because my favorite ergonomic trackball, the Trackman Mar
 
 I decided to build my own trackball with a shape that fits my hand similar to the old Trackman Marble FX, and incorporated a feature from the Kensington Slimblade (probably my second favorite, although not for its ergonomics): twisting the ball in the Z axis acts like a scroll-wheel (complete with clicky sounds produced by a piezo speaker).<br>
 
-<iframe width="560" height="315" src="https://www.youtube.com/embed/PVdwrbiuzwA" frameborder="0" allow="accelerometer; autoplay; clipboard-write; encrypted-media; gyroscope; picture-in-picture" allowfullscreen></iframe>
+[Short video demo is here](https://www.youtube.com/watch?v=PVdwrbiuzwA)
 
 To be able to sense rotation in all three axes, it needs to use two mouse sensors, positioned at different points around the ball. <br>
 
