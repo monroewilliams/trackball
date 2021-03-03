@@ -12,7 +12,9 @@ Once you're happy with the setup, render it to an STL file with OpenSCAD, open i
 If you're using the microswitch buttons, you'll also need three copies of the model from microswitch-cherry-mx.scad, with appropriate tweaks to `top_extra_overhang`/`top_extra_hinge`. (I'm currently using values of 1/20 for the main button, 5/5 for the right button, and 15/0 for the third button.)<br>
 
 <img src="../pictures/button-model.png"><br>
-<br>
+
+I've designed both the trackball model and the microswitch buttons to print with no supports and require only minimal bridging. You will need a printer with decent dimensional accuracy, as there are a couple of places where tolerances are fairly tight.<br>
+
 <img src="../pictures/fresh-print.jpeg"><br>
 
 The 1/8" bearings press-fit into the three holes around the inside of the ball recess. The little bearings are hard to keep hold of, so make sure you're somewhere that you can find them if they escape. (Shag carpet is not great for this. Ask me how I know...) <br>
