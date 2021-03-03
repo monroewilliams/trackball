@@ -32,12 +32,12 @@ Alternately you could skip the breadboard and solder everything onto a piece of 
 
 <img src="../pictures/board-4.jpeg"><br>
 
-For the sensors, I use 6-conductor ribbon cable, and solder the wires onto a strip of header pins. I arrange the wires so that they match up with the ordering of the ground, power, and SPI pins that are all together on one side of the XIAO/, with the Chip Select wire at the end adjacent to the clock pin. For sensor 1 this gets plugged into the breadboard adcacent to the XIAO and uses the D7 pin for chip-select, and for sensor 2 I leave an empty space (actually making it a 7 pin connector with one missing pin), and bring D6 across from the other side of the breadboard to put it on the next row over. 
+For the sensors, I use 6-conductor ribbon cable, and solder the breadboard end of the wires onto a strip of header pins. I arrange the wires so that they match up with the ordering of the ground, power, and SPI pins that are all together on one side of the XIAO, with the Chip Select wire at the end adjacent to the clock pin. For sensor 1 this gets plugged into the breadboard adcacent to the XIAO and uses the D7 pin for chip-select, and for sensor 2 I leave an empty space (actually making it a 7 pin connector with one missing pin), and bring D6 across from the other side of the breadboard to put it on the next row over. 
 
 <img src="https://files.seeedstudio.com/wiki/Seeeduino-XIAO/img/Seeeduino-XIAO-pinout.jpg">
 <img src="../pictures/board-6.jpeg"><br>
 
-The wires for the buttons connect to A0/A1/A2 on the opposite side of the chip, and the piezo speaker runs to A3 via breadboard wires. My layout has three rows of grounds on the breadboard just past A0 to make it easy to plug in the other end of the switch harnesses, but you could get away with 1 or two rows if you crowd them a bit.<br>
+The wires for the buttons connect to A0/A1/A2 on the opposite side of the chip, and the piezo speaker runs to A3 via breadboard wires. My layout has three rows of grounds on the breadboard just past A0 to make it easy to plug in the other end of the switch harnesses, but you could get away with one or two rows if you crowd them a bit.<br>
 
 This leaves A4/A5 (the i2c pins) open if you want to [hook up a display and see the images from the sensors](https://youtu.be/j6Hdsi4Or-g) (see the `SENSOR_DISPLAY` define in trackball.cpp for more info on this).<br>
 
@@ -74,7 +74,9 @@ The button assembies press-fit into the square holes in the body.<br>
 
 The wires run through the wiring channels underneath.<br>
 
-Carefully bundle the extra wires above the breadboard, plug in your USB cable, and insert the breadboard into the matching cutout under the hand-rest. It should sit flush with the bottom of the body.<br>
+Carefully bundle the extra wires above the breadboard, plug in your USB cable, and insert the breadboard into the matching cutout under the hand-rest. Route the wires around the sensor, and ensure they don't get pinched between the sides of the breadboard and the body.<br>
+
+The bottom of the breadboard should sit flush with the bottom of the body, and all the wires should run thorugh the cutouts, so the whole thing should be able to sit flat on the table when you're done.<br>
 
 <img src="../pictures/bottom-1.jpeg"><br>
 
