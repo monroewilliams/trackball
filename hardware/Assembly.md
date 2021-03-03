@@ -1,9 +1,16 @@
 # Assembly #
 
-This document assumes you are comfortable with 3D printing OpenSCAD models and soldering. If you're not, you might want to find someone who is.<br>
+This document assumes you are comfortable with 3D printing OpenSCAD models, soldering, and assembling electronics.<br>
 
-After picking an appropriate ball size and sensor type(s) in trackball.scad, render it to an STL file with OpenSCAD, open it in your favorite slicer (I use Cura, but any capable slicer will do), slice it, and print it out. If you're using the microswitch buttons, you'll also need three copies of the model from microswitch-cherry-mx.scad, with appropriate tweaks to `top_extra_overhang`/`top_extra_hinge`. (I'm currently using values of 1/20 for the main button, 5/5 for the right button, and 15/0 for the third button.)
+After picking an appropriate ball size and sensor type(s) in trackball.scad, render it to an STL file with OpenSCAD, open it in your favorite slicer (I use Cura, but any capable slicer will do), slice it, and print it out. <br>
 
+<img src="../pictures/model-1.png">
+<img src="../pictures/model-2.png">
+
+If you're using the microswitch buttons, you'll also need three copies of the model from microswitch-cherry-mx.scad, with appropriate tweaks to `top_extra_overhang`/`top_extra_hinge`. (I'm currently using values of 1/20 for the main button, 5/5 for the right button, and 15/0 for the third button.)<br>
+
+<img src="../pictures/button-model.png"><br>
+<br>
 <img src="../pictures/fresh-print.jpeg"><br>
 
 The 1/8" bearings press-fit into the three holes around the inside of the ball recess. The little bearings are hard to keep hold of, so make sure you're somewhere that you can find them if they escape. (Shag carpet is not great for this. Ask me how I know...) <br>
