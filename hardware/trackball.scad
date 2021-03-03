@@ -1,56 +1,32 @@
-//translate ([0, 0, -15])
-//{
-//    cube([60, 60, 30], center = true);
-//}
 
-body_height=1;
-body_diameter=67;
+// This module prints the full trackball body, with all cutouts.
+full();
 
-// Pool ball is 57mm in diameter.
+// This prints just the bottom plate. To use it, comment out full() above and uncomment this line.
+// bottom_cover();
+
+////////////////////
+// This selects the ball size.
+// A regulation billiard ball is 57mm in diameter.
 // Ball from the Kensington Slimblade is 55mm.
-// Bearings are 1/8" == 3.175mm
 ball_diameter=55;
-ball_clearance=1;
-bearing_diameter=3.175;
 
-bottom_clearance=4;
-hole_diameter=32;
-
-bearing_angle=60;
-bearing_spacing=[ 
-    [0, 0, 0],
-    [0, 0, 120],
-    [0, 0, -120] 
-];
-
-sensor_angle=60;
-// Having the sensors directly face-on to the ball doesn't work.
-// I suspect this is due to specular reflection washing out the surface details.
-sensor_skew_angle=10;
+////////////////////
+// sensor_params sets the location and type of the sensors.
+// Sensor params are:
+// 0 - location angle (clockwise from top)
+// 1 - sensor needs bottom access cutout (boolean)
+// 2 - sensor type -- one of the following:
 sensor_type_adns9800 = 0;
 sensor_type_pmw3360 = 1;
 
-// Sensor params are:
-// - location angle (clockwise from top)
-// - sensor needs bottom access cutout (boolean)
-// - sensor type (defined above)
 sensor_params = [
     [180, true, sensor_type_pmw3360],
     [45, true, sensor_type_pmw3360]
 ];
-sensor_clearance=2;
-lens_thickness=3.3;
-sensor_board_thickness=2;
-sensor_board_clearance=0;
-        
 
-// Give the ball clearance all the way around in the recess
-ball_radius=ball_diameter/2;
-recess_radius=ball_radius + ball_clearance;
-
-// Shorthand for the minimum z coordinate
-bottom = -(recess_radius + bottom_clearance);
-
+////////////////////
+// This sets the number and location of the cutouts/supports for buttons.
 // Button params are:
 // 0 - azimuth angle (clockwise from top)
 // 1 - elevation angle (downwards from level)
@@ -84,6 +60,44 @@ button_params = [
     [165, -8, 16, 90, 55, 50, 1, 20, false],
 
 ];
+
+////////////////////////////////////////////////////////////////
+// Below this line, things get complicated. 
+
+body_height=1;
+body_diameter=67;
+
+// Bearings are 1/8" == 3.175mm
+ball_clearance=1;
+bearing_diameter=3.175;
+
+bottom_clearance=4;
+hole_diameter=32;
+
+bearing_angle=60;
+bearing_spacing=[ 
+    [0, 0, 0],
+    [0, 0, 120],
+    [0, 0, -120] 
+];
+
+sensor_angle=60;
+// Having the sensors directly face-on to the ball doesn't work.
+// I suspect this is due to specular reflection washing out the surface details.
+sensor_skew_angle=10;
+
+sensor_clearance=2;
+lens_thickness=3.3;
+sensor_board_thickness=2;
+sensor_board_clearance=0;
+        
+
+// Give the ball clearance all the way around in the recess
+ball_radius=ball_diameter/2;
+recess_radius=ball_radius + ball_clearance;
+
+// Shorthand for the minimum z coordinate
+bottom = -(recess_radius + bottom_clearance);
 
 module button_transform(params)
 {
@@ -1132,5 +1146,4 @@ module full()
     }
 }
 
-full();
 
