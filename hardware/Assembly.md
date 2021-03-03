@@ -9,7 +9,7 @@ Once you're happy with the setup, render it to an STL file with OpenSCAD, open i
 <img src="../pictures/model-1.png">
 <img src="../pictures/model-2.png">
 
-If you're using the microswitch buttons, you'll also need three copies of the model from microswitch-cherry-mx.scad, with appropriate tweaks to `top_extra_overhang`/`top_extra_hinge`. (I'm currently using values of 1/20 for the main button, 5/5 for the right button, and 15/0 for the third button.)<br>
+If you're using the microswitch buttons, you'll also need three copies of the model from microswitch-cherry-mx.scad, with appropriate tweaks to `top_extra_overhang`/`top_extra_hinge`. (I'm currently using values of 5/20 for the main button, 5/5 for the right button, and 15/0 for the third button.)<br>
 
 <img src="../pictures/button-model.png"><br>
 
