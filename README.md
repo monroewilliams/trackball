@@ -14,9 +14,9 @@ I decided to build my own trackball with a shape that fits my hand similar to th
 
 To be able to sense rotation in all three axes, it needs to use two mouse sensors, positioned at different points around the ball. <br>
 
-I'm quite happy with the current state of the project. I prefer using this trackball to any other I've used at this point, which is saying something. :)
+I'm quite happy with the current state of the project. I prefer using this trackball to any other I've used at this point, which is saying something. :) <br>
 
-The [hardware](hardware) directory contains the OpenSCAD files for the printed plastics. The [src](src) directory has the code.
+The [hardware](hardware) directory contains the OpenSCAD files for the printed plastics. The [src](src) directory has the code. If you want to see how all the parts fit together, you can go straight to the [assembly guide](hardware/Assembly.md). <br>
 
 # BUILD #
 
