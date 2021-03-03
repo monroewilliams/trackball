@@ -2,7 +2,9 @@
 
 This document assumes you are comfortable with 3D printing OpenSCAD models, soldering, and assembling electronics.<br>
 
-After picking an appropriate ball size and sensor type(s) in trackball.scad, render it to an STL file with OpenSCAD, open it in your favorite slicer (I use Cura, but any capable slicer will do), slice it, and print it out. <br>
+Set up the model in `trackball.scad` by setting `ball_diameter` to the diameter of the ball you want to use, and the entries in `sensor_params` to the type of sensor you're using. (You can also tweak the location/number of button cutouts by modifying the contents of `button_params`, although getting a layout that works can take some tweaking. I would advise trying out the default setup first.)
+
+Once you're happy with the setup, render it to an STL file with OpenSCAD, open it in your favorite slicer (I use Cura, but any capable slicer will do), slice it, and print it out. <br>
 
 <img src="../pictures/model-1.png">
 <img src="../pictures/model-2.png">
