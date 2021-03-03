@@ -870,7 +870,7 @@ stud_locations = [
     [-39, -27],
 ];
 
-module bottom_cover(thickness, include_button_supports = false)
+module bottom_cover(thickness = 2, include_button_supports = false)
 {
     union()
     {
