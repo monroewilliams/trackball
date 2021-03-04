@@ -7,9 +7,17 @@ full();
 
 ////////////////////
 // This selects the ball size.
-// A regulation billiard ball is 57mm in diameter.
+// A regulation billiard ball is 2 1/4" (~57mm) in diameter.
+// ball_diameter=57;
+//
 // Ball from the Kensington Slimblade is 55mm.
 ball_diameter=55;
+//
+// A regulation snooker ball is 52.5mm (~2 1/16").
+// The ball from a Trackman Marble FX is 52.33mm by my caliper
+// The ball from an Elecom HUGE is 51.97mm by my caliper.
+// ball_diameter=52.5;
+//
 
 ////////////////////
 // sensor_params sets the location and type of the sensors.
@@ -24,6 +32,12 @@ sensor_params = [
     [180, true, sensor_type_pmw3360],
     [45, true, sensor_type_pmw3360]
 ];
+
+////////////////////
+// At one point, I found that having sensors directly face-on to the ball didn't work.
+// This may have been due to some interaction between the ADNS9800 and the particular ball I was using.
+// With the pmw3360 and one of the purpose-made balls, it seems to work fine to have a skew angle of 0.
+sensor_skew_angle=0;
 
 ////////////////////
 // This sets the number and location of the cutouts/supports for buttons.
@@ -72,7 +86,7 @@ ball_clearance=1;
 bearing_diameter=3.175;
 
 bottom_clearance=4;
-hole_diameter=32;
+hole_diameter=ball_diameter - 25;
 
 bearing_angle=60;
 bearing_spacing=[ 
@@ -82,9 +96,6 @@ bearing_spacing=[
 ];
 
 sensor_angle=60;
-// Having the sensors directly face-on to the ball doesn't work.
-// I suspect this is due to specular reflection washing out the surface details.
-sensor_skew_angle=10;
 
 sensor_clearance=2;
 lens_thickness=3.3;
