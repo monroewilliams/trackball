@@ -396,18 +396,24 @@ void display_sensors()
   unsigned long read1 = micros();
   int width1 = s1.image_width();
   int height1 = s1.image_height();
-  s1.read_image(pixels);
-  unsigned long render1 = micros();
-  draw_sensor_pixels(0, 128 - (height1 * 2), pixels, width1, height1, width1, true);
-  unsigned long read2 = micros();
   int width2 = s2.image_width();
   int height2 = s2.image_height();
+
+  s1.read_image(pixels);
+  unsigned long render1 = micros();
+
+  bool zoom1 = (height1 * 2 < display.height()) && ((width1 * 2) + width2 < display.width());
+  draw_sensor_pixels(0, display.height() - (height1 * 2), pixels, width1, height1, width1, zoom1);
+  unsigned long read2 = micros();
+
   s2.read_image(pixels);
   unsigned long render2 = micros();
-  bool zoom = (width1 * 2) + (width2 * 2) < 128;
-  int x2 = 128 - (width2 * (zoom?2:1));
-  int y2 = 128 - (height2 * (zoom?2:1));
-  draw_sensor_pixels(x2, y2, pixels, width2, height2, width2, zoom);
+
+  bool zoom2 = (height2 * 2 < display.height()) && ((width1 * (zoom1?2:1)) + (width2 * 2) < display.width());
+  int x2 = display.width() - (width2 * (zoom2?2:1));
+  int y2 = display.width() - (height2 * (zoom2?2:1));
+  draw_sensor_pixels(x2, y2, pixels, width2, height2, width2, zoom2);
+
   unsigned long xfer = micros();
 #if defined(SENSOR_DISPLAY_GRAY4)
   display.display();
