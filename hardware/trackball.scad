@@ -11,12 +11,12 @@ full();
 // ball_diameter=57;
 //
 // Ball from the Kensington Slimblade is 55mm.
-ball_diameter=55;
+ ball_diameter=55;
 //
 // A regulation snooker ball is 52.5mm (~2 1/16").
 // The ball from a Trackman Marble FX is 52.33mm by my caliper
 // The ball from an Elecom HUGE is 51.97mm by my caliper.
-// ball_diameter=52.5;
+//ball_diameter=52.5;
 //
 
 ////////////////////
@@ -51,9 +51,10 @@ sensor_skew_angle=0;
 // 6 - front overhang (should match up with parametrs in microswitch_cherry_mx.scad)
 // 7 - rear overhang (same)
 // 8 - create bottom access cutout
+// 9 - add support
 button_params = [
     // main button
-    [110, 27, 12, -5, 7, -3 - 90, 5, 20, true],
+    [110, 27, 12, -5, 7, -3 - 90, 5, 20, true, false],
 
     // ring finger button
     // first model version:
@@ -61,7 +62,7 @@ button_params = [
     // second version, for 57mm model
     // [-60, 33, 13, 30, 0, 0, 0, 0, true],
     // third version, for 55mm model, moved slightly clockwise
-    [-70, 33, 13, 30, -8, 5, 0, 0, true],
+    [-70, 33, 13, 30, -8, 5, 0, 0, true, true],
  
     // other attempts at ring finger button:
     // [-60, 38, 12, 30, 0, 0 + 90, 5,10]
@@ -71,7 +72,10 @@ button_params = [
     // [-10, 19, 13, 30, 30, 12, 0, 0, true],
 
     // second thumb button (work in progress)
-    [165, -8, 16, 90, 55, 50, 1, 20, false],
+    // mk. 1
+    // [165, -8, 16, 90, 55, 50, 1, 20, false],
+    // mk. 2
+    [165, 0, 17, 70, 60, 180 + 30, 20, 0, false, false],
 
 ];
 
@@ -820,10 +824,13 @@ module body_button_supports()
 {
     for(i = button_params )
     {
-        shadow_hull(10)
-        button_transform(i)
-        translate([0, 0, -10])
-        rcube(20, 20, 10, 3);
+        if(i[9])
+        {
+            shadow_hull(10)
+            button_transform(i)
+            translate([0, 0, -10])
+            rcube(20, 20, 10, 3);
+        }
     }
 
 }
