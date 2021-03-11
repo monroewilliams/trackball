@@ -239,26 +239,30 @@ module button_cutout(front_overhang = 0, rear_overhang = 0)
         if ((front_overhang == 0) && (rear_overhang == 0))
         {
             // 3mm cut around the hole for seating/overhang and keycap
-            rcube(20, 20, 40, 1);
+            rcube(20, 20, 20, 1);
         }
         else
         {
             // 1mm cut around the hole for seating/overhang
-            ccube(16, 16, 40);
+            ccube(16, 16, 20);
         }
 
         // Front and rear overhangs are intended to match up with the overhang parameters in 
         // microswitch-cherry-mx.scad.
         if (front_overhang > 0)
         {
+            // Cutout for the safety catch
             translate([-7.5, 7, 0])
-            cube([15, front_overhang + 3, 6]);
+            cube([15, 5, 20]);
+            // Cutout for the part of the top which extends past the catch
+            translate([-7.5, 7, 4])
+            cube([15, front_overhang + 3, 16]);
         }
 
         if (rear_overhang > 0)
         {
             translate([-7.5, -7 - (1 + rear_overhang), 0])
-            cube([15, 1 + rear_overhang, 6]);
+            cube([15, 1 + rear_overhang, 20]);
         }
     }
 }
