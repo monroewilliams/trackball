@@ -78,8 +78,8 @@ button_params = [
 ////////////////////////////////////////////////////////////////
 // Below this line, things get complicated. 
 
-body_height=1;
-body_diameter=67;
+minimal_body_height=1;
+minimal_body_diameter=67;
 
 // Bearings are 1/8" == 3.175mm
 ball_clearance=1;
@@ -945,7 +945,7 @@ module body_minimal()
                 {
                     // Footprint outline
                     translate ([0, 0, -(recess_radius + bottom_clearance)])
-                    cylinder(h=body_height, d=body_diameter);
+                    cylinder(h=minimal_body_height, d=minimal_body_diameter);
                     
                     // Pods for each of three support bearings
                     for(i = bearing_spacing )
@@ -1081,7 +1081,7 @@ module sensor_cutouts()
             sensor_cutout(params);
             
             // // Clip the cutouts to the top of the base ring.
-            // translate([0, 0, body_height + bottom])
+            // translate([0, 0, minimal_body_height + bottom])
             // ccube(100, 100, -100);
         }
     }
