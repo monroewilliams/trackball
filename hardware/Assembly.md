@@ -10,6 +10,7 @@ Once you're happy with the setup, render it to an STL file with OpenSCAD, open i
 <img src="../pictures/model-2.png">
 
 If you're using the microswitch buttons, you'll also need three copies of the model from microswitch-cherry-mx.scad, with appropriate tweaks to `top_extra_overhang`/`top_extra_hinge`. (I'm currently using values of 5/20 for the main button, 5/5 for the right button, and 15/0 for the third button.)<br>
+**Update March 12, 2021:** I've refined the third button mount a bit. The mount is now lower-profile than what's in these pictures, and it takes a 20/0 carrier instead of a 15/0. This is called out in `trackball.scad` as `"second thumb button, mk. 2"`.<br>
 
 <img src="../pictures/button-model.png"><br>
 
