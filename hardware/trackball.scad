@@ -1007,7 +1007,7 @@ module wire_cutout_straight_section(h)
         linear_extrude(height = h)
         wire_cutout_profile();
         translate([0, 0, h])
-        sphere(r=wire_channel_size * 1.25);
+        sphere(r=wire_channel_size * 1.5);
         // linear_extrude(height = 8, scale=2)
         // wire_cutout_profile();
     }
