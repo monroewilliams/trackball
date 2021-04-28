@@ -191,7 +191,7 @@ module ball_cutout()
     union()
     {
         // spherical part of the recess
-        sphere(d=50, $fa=5, $fs=0.1);
+        sphere(d=50);
         sphere(d=ball_diameter + (ball_clearance * 2));
 
         // clearance cut for ball removal, roughly matching the angle of the right front cut
@@ -664,7 +664,8 @@ module body_left_cut()
                 {
                     // fillet
                     fillet_amount = 20;
-                    offset(-fillet_amount) 
+                    // Added $fn=128 to make the left cut high-res
+                    offset(-fillet_amount, $fn=128) 
                     offset(fillet_amount)
                     translate([radius, ledge_height])
                     rotate([0, 0, -downward_curve])
@@ -1145,7 +1146,8 @@ module button_cutouts()
     }
 }
 
-$fa = 4;
+// Set this to 4 for medium-res, 1 for high-res
+$fa = 1;
 
 module full()
 {
