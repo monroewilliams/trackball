@@ -2,8 +2,12 @@
 // This module prints the full trackball body, with all cutouts.
 full();
 
-// This prints just the bottom plate. To use it, comment out full() above and uncomment this line.
-// bottom_cover();
+// This prints the bottom plate. To use it, comment out full() above and uncomment this line.
+// The first argument is the thickness of the bottom cover in mm. I recommend at least 3, for structural integrity.
+// The second argument controls whether the bottom cover includes the shape of the button supports.
+// The third argument controls whether the attachment pins have screw holes for M3 countersunk machine screws.
+//    This can be useful if the friction fit on the pins isn't holding well.
+// bottom_cover(3, false, true);
 
 ////////////////////
 // This selects the ball size.
@@ -883,51 +887,103 @@ stud_height = 2;
 
 module bottom_stud()
 {
-    translate([0, 0, -1])
-    cylinder(d=stud_diameter, h = stud_height + 1, $fs=0.5);
+    translate([0, 0, -0.01])
+    cylinder(d=stud_diameter, h = stud_height + 0.01, $fn=64);
+}
+
+module bottom_stud_screw_hole()
+{
+    // Add a hole that can be used for an M3x8 countersunk screw, for more permanent installs.
+    translate([0, 0, 2])
+    {
+        cylinder(d=3, h = 10, $fn=64);
+
+        mirror([0, 0, 1])
+        {
+            linear_extrude(height=2, scale=2)
+            circle(d=3, $fn=64);
+
+            translate([0, 0, 2])
+            linear_extrude(height=10)
+            circle(d=6, $fn=64);
+        }
+    }
+}
+
+
+ module circle_outer(radius,fn)
+ {
+   fudge = 1/cos(180/fn);
+   circle(r=radius*fudge,$fn=fn);
 }
 
 module bottom_stud_hole()
 {
     union()
     {
-        bottom_stud();
+        // Polygonal, circumcribed hole.
+        hole_sides = 8;
+        translate([0, 0, -0.01])
+        linear_extrude(height=stud_height+0.02)
+        circle_outer(stud_diameter/2, hole_sides);
+
+        // Taper to a point for easier printing
         translate([0, 0, stud_height])
-        sphere(d = stud_diameter, $fs=0.5);
+        linear_extrude(height=stud_diameter / 2, scale=0)
+        circle_outer(stud_diameter/2, hole_sides);
+
+        // Add a hole that can be used for an M3x8 countersunk screw, for more permanent installs.
+        // height is the screw depth minus the bottom thickness.
+        cylinder(d=3, h=6);
     }
 }
 
 stud_locations = [
     // Clockwise when looking at the bottom of the body, starting from the tail.
     [0, -80],
-    [25, -65],
+    // Moving this one a bit due to clearance issues between the top surface and the mounting screw hole.
+    // [25, -65],
+    [27, -55],
     [33, -20],
     [-4, 23],
     [-45, 15],
     [-39, -27],
 ];
 
-module bottom_cover(thickness = 2, include_button_supports = false)
+module bottom_cover(thickness = 3, include_button_supports = false, include_screw_holes = false)
 {
-    union()
+    difference()
     {
-        intersection()
+        union()
         {
-            translate([0, 0, - bottom])
+            intersection()
             {
-                difference()
+                translate([0, 0, - bottom])
                 {
-                    body_unclipped(include_button_supports);
-                    ball_cutout();
+                    difference()
+                    {
+                        body_unclipped(include_button_supports);
+                        ball_cutout();
+                    }
                 }
+                ccube(400, 400, -thickness);
             }
-            ccube(400, 400, -thickness);
+
+            for(i = stud_locations)
+            {
+                translate(i)
+                bottom_stud();
+            }
         }
 
-        for(i = stud_locations)
+        if (include_screw_holes)
         {
-            translate(i)
-            bottom_stud();
+            for(i = stud_locations)
+            {
+                translate(i)
+                translate([0, 0, -thickness])
+                bottom_stud_screw_hole();
+            }
         }
     }
 }
