@@ -588,11 +588,6 @@ void setup()
       pinMode(buttonPins[i], INPUT_PULLUP);
   }
 
-#ifdef PIN_PIEZO
-  // Piezo output
-  pinMode(PIN_PIEZO, OUTPUT);
-#endif
-
 #if defined(SENSOR_DISPLAY_I2C)
   if (!i2c_probe_bus())
   {
@@ -645,11 +640,29 @@ void setup()
 #endif
 }
 
+// Leaving the piezo pin in OUTPUT mode seems to cause a faint, constant noise from the piezo speaker.
+// Only put it in OUTPUT mode when playing clicks.
+static bool clicking = false;
 void click()
 {
 #ifdef PIN_PIEZO
+  pinMode(PIN_PIEZO, OUTPUT);
   // This is MUCH louder than just toggling the high/low once with digitalWrite().
-  tone(PIN_PIEZO, 1500, 5);
+  tone(PIN_PIEZO, 1500);
+  clicking = true;
+#endif
+}
+
+void quiet()
+{
+#ifdef PIN_PIEZO
+  if (clicking)
+  {
+    clicking = false;
+    // Stop the tone (if playing) and take the pin out of OUTPUT mode.
+    noTone(PIN_PIEZO);
+    pinMode(PIN_PIEZO, INPUT);
+  }
 #endif
 }
 
@@ -906,7 +919,8 @@ void loop()
   {
     delayMicroseconds(report_microseconds - loop_time);
   }
-    
+
+  quiet();
 }
 
 
