@@ -1,0 +1,274 @@
+EESchema Schematic File Version 4
+EELAYER 30 0
+EELAYER END
+$Descr A4 11693 8268
+encoding utf-8
+Sheet 1 1
+Title ""
+Date ""
+Rev ""
+Comp ""
+Comment1 ""
+Comment2 ""
+Comment3 ""
+Comment4 ""
+$EndDescr
+$Comp
+L Seeeduino_XIAO:SeeeduinoXIAO U1
+U 1 1 604BA485
+P 5650 3800
+F 0 "U1" H 5625 2861 50  0000 C CNN
+F 1 "SeeeduinoXIAO" H 5625 2770 50  0000 C CNN
+F 2 "Seeeduino XIAO KICAD:Seeeduino XIAO-MOUDLE14P-2.54-21X17.8MM" H 5300 4000 50  0001 C CNN
+F 3 "" H 5300 4000 50  0001 C CNN
+	1    5650 3800
+	1    0    0    -1  
+$EndComp
+$Comp
+L Connector_Generic:Conn_01x06 S2
+U 1 1 604C25EF
+P 7500 4650
+F 0 "S2" H 7580 4642 50  0000 L CNN
+F 1 "Conn_01x06" H 7580 4551 50  0001 L CNN
+F 2 "Connector_PinHeader_2.54mm:PinHeader_1x06_P2.54mm_Vertical" H 7500 4650 50  0001 C CNN
+F 3 "~" H 7500 4650 50  0001 C CNN
+	1    7500 4650
+	1    0    0    -1  
+$EndComp
+$Comp
+L Connector_Generic:Conn_01x06 S1
+U 1 1 604C3112
+P 7650 3700
+F 0 "S1" H 7730 3692 50  0000 L CNN
+F 1 "Conn_01x06" H 7730 3601 50  0001 L CNN
+F 2 "Connector_PinHeader_2.54mm:PinHeader_1x06_P2.54mm_Vertical" H 7650 3700 50  0001 C CNN
+F 3 "~" H 7650 3700 50  0001 C CNN
+	1    7650 3700
+	1    0    0    -1  
+$EndComp
+$Comp
+L Connector_Generic:Conn_01x02 B3
+U 1 1 604C51B9
+P 4200 4300
+F 0 "B3" H 4118 4517 50  0000 C CNN
+F 1 "Conn_01x02" H 4118 4426 50  0001 C CNN
+F 2 "Connector_PinHeader_2.54mm:PinHeader_1x02_P2.54mm_Vertical" H 4200 4300 50  0001 C CNN
+F 3 "~" H 4200 4300 50  0001 C CNN
+	1    4200 4300
+	0    -1   1    0   
+$EndComp
+$Comp
+L Connector_Generic:Conn_01x02 B2
+U 1 1 604C5B99
+P 4200 3900
+F 0 "B2" H 4118 4117 50  0000 C CNN
+F 1 "Conn_01x02" H 4118 4026 50  0001 C CNN
+F 2 "Connector_PinHeader_2.54mm:PinHeader_1x02_P2.54mm_Vertical" H 4200 3900 50  0001 C CNN
+F 3 "~" H 4200 3900 50  0001 C CNN
+	1    4200 3900
+	0    -1   1    0   
+$EndComp
+$Comp
+L Connector_Generic:Conn_01x02 B1
+U 1 1 604C6F8E
+P 4200 3550
+F 0 "B1" H 4118 3767 50  0000 C CNN
+F 1 "Conn_01x02" H 4118 3676 50  0001 C CNN
+F 2 "Connector_PinHeader_2.54mm:PinHeader_1x02_P2.54mm_Vertical" H 4200 3550 50  0001 C CNN
+F 3 "~" H 4200 3550 50  0001 C CNN
+	1    4200 3550
+	0    -1   1    0   
+$EndComp
+$Comp
+L Device:Speaker_Crystal LS1
+U 1 1 604C9361
+P 5600 2250
+F 0 "LS1" H 5775 2246 50  0001 L CNN
+F 1 "Piezo" H 5775 2155 50  0000 L CNN
+F 2 "Buzzer_Beeper:Buzzer_12x9.5RM7.6" H 5565 2200 50  0001 C CNN
+F 3 "~" H 5565 2200 50  0001 C CNN
+	1    5600 2250
+	1    0    0    -1  
+$EndComp
+Wire Wire Line
+	7450 3700 7100 3700
+Wire Wire Line
+	6600 3800 6600 3950
+Wire Wire Line
+	6600 3950 6450 3950
+Wire Wire Line
+	6700 3900 6700 4100
+Wire Wire Line
+	6700 4100 6450 4100
+Wire Wire Line
+	7450 4000 7450 4250
+Wire Wire Line
+	7450 4250 6450 4250
+Wire Wire Line
+	6450 3700 6450 3800
+Wire Wire Line
+	7300 4650 7100 4650
+Wire Wire Line
+	7300 4750 7000 4750
+Wire Wire Line
+	6600 3800 7000 3800
+Wire Wire Line
+	6700 3900 6900 3900
+Wire Wire Line
+	7100 4650 7100 3700
+Connection ~ 7100 3700
+Wire Wire Line
+	7100 3700 6450 3700
+Wire Wire Line
+	7000 4750 7000 3800
+Connection ~ 7000 3800
+Wire Wire Line
+	7000 3800 7450 3800
+Wire Wire Line
+	7300 4850 6900 4850
+Wire Wire Line
+	6900 4850 6900 3900
+Connection ~ 6900 3900
+Wire Wire Line
+	6900 3900 7450 3900
+Wire Wire Line
+	7300 4950 4800 4950
+Wire Wire Line
+	4800 4950 4800 4250
+Wire Wire Line
+	4300 3350 4800 3350
+Wire Wire Line
+	4300 3700 4400 3700
+Wire Wire Line
+	4400 3700 4400 3500
+Wire Wire Line
+	4400 3500 4800 3500
+Wire Wire Line
+	4300 4100 4500 4100
+Wire Wire Line
+	4500 4100 4500 3650
+Wire Wire Line
+	4500 3650 4800 3650
+Wire Wire Line
+	5400 2250 4650 2250
+Wire Wire Line
+	4650 2250 4650 3800
+Wire Wire Line
+	4650 3800 4800 3800
+$Comp
+L power:GND #PWR0101
+U 1 1 604E1808
+P 3600 4100
+F 0 "#PWR0101" H 3600 3850 50  0001 C CNN
+F 1 "GND" H 3605 3927 50  0000 C CNN
+F 2 "" H 3600 4100 50  0001 C CNN
+F 3 "" H 3600 4100 50  0001 C CNN
+	1    3600 4100
+	1    0    0    -1  
+$EndComp
+$Comp
+L power:GND #PWR0102
+U 1 1 604E7B9E
+P 5250 2550
+F 0 "#PWR0102" H 5250 2300 50  0001 C CNN
+F 1 "GND" H 5255 2377 50  0000 C CNN
+F 2 "" H 5250 2550 50  0001 C CNN
+F 3 "" H 5250 2550 50  0001 C CNN
+	1    5250 2550
+	1    0    0    -1  
+$EndComp
+Wire Wire Line
+	5400 2350 5250 2350
+Wire Wire Line
+	5250 2350 5250 2550
+$Comp
+L power:GND #PWR0103
+U 1 1 604E9308
+P 6950 3000
+F 0 "#PWR0103" H 6950 2750 50  0001 C CNN
+F 1 "GND" H 6955 2827 50  0000 C CNN
+F 2 "" H 6950 3000 50  0001 C CNN
+F 3 "" H 6950 3000 50  0001 C CNN
+	1    6950 3000
+	1    0    0    -1  
+$EndComp
+$Comp
+L Connector_Generic:Conn_01x02 B4
+U 1 1 604F01D8
+P 4200 4650
+F 0 "B4" H 4118 4867 50  0000 C CNN
+F 1 "Conn_01x02" H 4118 4776 50  0001 C CNN
+F 2 "Connector_PinHeader_2.54mm:PinHeader_1x02_P2.54mm_Vertical" H 4200 4650 50  0001 C CNN
+F 3 "~" H 4200 4650 50  0001 C CNN
+	1    4200 4650
+	0    -1   1    0   
+$EndComp
+$Comp
+L Connector_Generic:Conn_01x02 B5
+U 1 1 604F217D
+P 4200 5000
+F 0 "B5" H 4118 5217 50  0000 C CNN
+F 1 "Conn_01x02" H 4118 5126 50  0001 C CNN
+F 2 "Connector_PinHeader_2.54mm:PinHeader_1x02_P2.54mm_Vertical" H 4200 5000 50  0001 C CNN
+F 3 "~" H 4200 5000 50  0001 C CNN
+	1    4200 5000
+	0    -1   1    0   
+$EndComp
+Wire Wire Line
+	4300 4450 4600 4450
+Wire Wire Line
+	4600 4450 4600 3950
+Wire Wire Line
+	4600 3950 4800 3950
+Wire Wire Line
+	4300 4800 4700 4800
+Wire Wire Line
+	4700 4800 4700 4100
+Wire Wire Line
+	4700 4100 4800 4100
+Wire Wire Line
+	7450 3600 7200 3600
+Wire Wire Line
+	6450 3600 6450 3650
+Wire Wire Line
+	7300 4550 7200 4550
+Wire Wire Line
+	7200 4550 7200 3600
+Connection ~ 7200 3600
+Wire Wire Line
+	7200 3600 6450 3600
+Wire Wire Line
+	7300 4450 7300 3500
+Wire Wire Line
+	7300 3000 6950 3000
+Wire Wire Line
+	7450 3500 7300 3500
+Connection ~ 7300 3500
+Wire Wire Line
+	7300 3500 7300 3000
+Wire Wire Line
+	6450 3500 7300 3500
+Wire Wire Line
+	4200 4100 3900 4100
+Wire Wire Line
+	4200 3700 3900 3700
+Wire Wire Line
+	3900 3700 3900 4100
+Connection ~ 3900 4100
+Wire Wire Line
+	3900 4100 3600 4100
+Wire Wire Line
+	4200 3350 3900 3350
+Wire Wire Line
+	3900 3350 3900 3700
+Connection ~ 3900 3700
+Wire Wire Line
+	4200 4450 3900 4450
+Wire Wire Line
+	3900 4450 3900 4100
+Wire Wire Line
+	4200 4800 3900 4800
+Wire Wire Line
+	3900 4800 3900 4450
+Connection ~ 3900 4450
+$EndSCHEMATC
