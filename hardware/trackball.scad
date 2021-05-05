@@ -13,15 +13,15 @@ full();
 // This selects the ball size.
 // A regulation billiard ball is 2 1/4" (~57mm) in diameter.
 // ball_diameter=57;
-//
+
 // Ball from the Kensington Slimblade is 55mm.
- ball_diameter=55;
-//
+ball_diameter=55;
+
 // A regulation snooker ball is 52.5mm (~2 1/16").
 // The ball from a Trackman Marble FX is 52.33mm by my caliper
 // The ball from an Elecom HUGE is 51.97mm by my caliper.
-//ball_diameter=52.5;
-//
+// ball_diameter=52.5;
+
 
 ////////////////////
 // sensor_params sets the location and type of the sensors.
@@ -40,7 +40,8 @@ sensor_params = [
 ////////////////////
 // At one point, I found that having sensors directly face-on to the ball didn't work.
 // This may have been due to some interaction between the ADNS9800 and the particular ball I was using.
-// With the pmw3360 and one of the purpose-made balls, it seems to work fine to have a skew angle of 0.
+// Setting this to 10 fixes the issues with that sensor/ball combination.
+// With the pmw3360 and one of the purpose-made balls (Kensington/Perixx), it seems to work fine to have a skew angle of 0.
 sensor_skew_angle=0;
 
 ////////////////////
@@ -57,30 +58,20 @@ sensor_skew_angle=0;
 // 8 - create bottom access cutout
 // 9 - add support
 button_params = [
-    // main button
+    // main button (matches mircroswitch-cherry-mx-5-20.stl)
     [110, 27, 12, -5, 7, -3 - 90, 5, 20, true, false],
 
-    // ring finger button
-    // first model version:
-    // [-60, 30, 13, 24, 0, 90, 5, 20]
-    // second version, for 57mm model
-    // [-60, 33, 13, 30, 0, 0, 0, 0, true],
-    // third version, for 55mm model, moved slightly clockwise
+    // ring finger button (matches mircroswitch-cherry-mx-5-5.stl)
     [-70, 33, 13, 30, -8, 5, 0, 0, true, true],
- 
-    // other attempts at ring finger button:
-    // [-60, 38, 12, 30, 0, 0 + 90, 5,10]
-    // [-30, 34, 14, 40, 33, -9 + 90, 5, 20],
-   
-    // middle finger button, mk. 1
-    // [-10, 19, 13, 30, 30, 12, 0, 0, true],
 
-    // second thumb button (work in progress)
-    // mk. 1
-    // [165, -8, 16, 90, 55, 50, 1, 20, false],
-    // mk. 2
+    // second thumb button (matches mircroswitch-cherry-mx-20-0.stl)
     [165, 0, 17, 70, 60, 180 + 30, 20, 0, false, false],
 
+    // middle finger button (could use mircroswitch-cherry-mx-5-5.stl or an actual keyswitch)
+    // [-25, 20, 17, -15, 30, 0, 0, 0, true, true],
+
+    // index finger button (could use mircroswitch-cherry-mx-5-5.stl or an actual keyswitch)
+    // [10, -0, 17, 5, 30, 0, 0, 0, true, true],
 ];
 
 ////////////////////////////////////////////////////////////////
