@@ -11,7 +11,9 @@
 #ifdef ADNS_SUPPORT_PMW3360DM
   #include "PMW3360DM_firmware.h"
 #endif
-
+#ifdef ADNS_SUPPORT_PMW3389DM
+  #include "PMW3389DM_firmware.h"
+#endif
 
 // Registers
 enum
@@ -153,6 +155,7 @@ bool adns::init ()
   return true;
 }
 
+
 void adns::reset()
 {
   com_end(); // ensure that the SPI port is reset
@@ -265,6 +268,17 @@ bool adns::upload_firmware()
       write_reg(REG_Configuration_II, 0x20);
     break;
 #endif
+#ifdef ADNS_SUPPORT_PMW3389DM
+    case PID_pmw3389dm:
+      debugLogger.println(F("Uploading PMW3389DM firmware"));
+      firmware_length = firmware_length_pmw3389dm;
+      firmware_data = firmware_data_pmw3389dm;
+
+      // Write 0 to Rest_En bit of Config2 register to disable Rest mode.
+      write_reg(REG_Configuration_II, 0x20);
+    break;
+#endif
+
     default:
       debugLogger.println(F("*** No firmware available for this chip! ***"));
       return false;
@@ -301,6 +315,18 @@ bool adns::upload_firmware()
   switch(product_id)
   {
     case PID_pmw3360dm:
+      // Read the SROM_ID register to verify the ID before any other register reads or writes.
+      read_reg(REG_SROM_ID);
+
+      // Write 0x00 to Config2 register for wired mouse or 0x20 for wireless mouse design.
+      write_reg(REG_Configuration_II, 0x00);
+
+      // set initial CPI resolution
+      // We do this later, using set_cpi().
+      // write_reg(REG_Configuration_I, 0x15);
+    break;
+
+    case PID_pmw3389dm:
       // Read the SROM_ID register to verify the ID before any other register reads or writes.
       read_reg(REG_SROM_ID);
 
@@ -365,6 +391,9 @@ Vector adns::motion()
     return Vector(x * cpi_scale_factor, y * cpi_scale_factor);
 }
 
+
+
+
 void adns::read_motion_burst()
 {
   byte burst[14];
@@ -427,6 +456,22 @@ void adns::set_cpi(int cpi)
       cpi = 0x29;
       
     write_reg(REG_Configuration_I, cpi);
+}
+
+int adns::updateCPI(int increment)
+{
+  cpi_scale_factor = cpi_scale_factor + (float)increment/160;
+  if(cpi_scale_factor < 0.05)
+  {
+    cpi_scale_factor = 0.05;
+  }
+  if(cpi_scale_factor > 1)
+  {
+    cpi_scale_factor = 1;
+  }
+
+  return cpi_scale_factor * report_cpi;
+
 }
 
 void adns::set_snap_angle(byte enable)

@@ -10,13 +10,19 @@
 // Various config options
 
 // This is the cpi we will report to the host. It's independent of the sensor's physical CPI.
-const int reported_cpi = 2400;
+int reported_cpi = 3000;
 
 // This is the frequency at which we poll sensors/buttons and send HID reports.
 const int report_Hz = 120;
 
+//-! Feature that makes the scroll function adjust CPI if mouse button 3 is pressed.
+#define CPI_ADJUST 1
+
 // Use a custom HID descriptor instead of TUD_HID_REPORT_DESC_MOUSE()
 #define USE_CUSTOM_HID_DESCRIPTOR 1
+
+// Lock X and Y movement when scrolling
+#define LOCK_POSITION_WHILE_SCROLLING 1
 
 // Use HID_USAGE_DESKTOP_RESOLUTION_MULTIPLIER to transmit higher-fidelity scroll reports.
 // Only used if USE_CUSTOM_HID_DESCRIPTOR is also set to 1.
@@ -31,8 +37,8 @@ const int report_Hz = 120;
 
 // These give the option to connect a display and toggle between regular operation and displaying the images from the sensors.
 // 0 - no display
-// 1 - SSD1327 display on the i2c bus  ( https://www.adafruit.com/product/4741 )
-// 2 - 128x128 SSD1351 on the SPI bus  ( https://www.amazon.com/gp/product/B07DB5YFGW )
+// 1 - SSD1327 display on the i2c bus  ( https://www.adafruit.kk)
+// 2 - 128x128 SSD1351 on the SPI bus  ( https://www.amazon.cokkB5YFGW )
 #define SENSOR_DISPLAY 0
 
 // Use this to start out in sensor display mode. 
@@ -157,11 +163,13 @@ Adafruit_USBD_HID usb_hid;
 #if defined(SEEED_XIAO_M0) || defined(ARDUINO_QTPY_M0)
   // Pin assignments on Seeeduino XIAO/Adafruit QT Py:
   // piezo speaker +
-  #define PIN_PIEZO 3
+  #define PIN_PIEZO 5
   // Mouse button inputs
   #define PIN_BUTTON_LEFT 0 
   #define PIN_BUTTON_RIGHT 1 
-  #define PIN_BUTTON_MIDDLE 2 
+  #define PIN_BUTTON_MIDDLE 2
+  #define PIN_BUTTON_BTN4 3
+  #define PIN_BUTTON_BTN5 4 
   // Select pins for sensors
   #define PIN_SENSOR_1_SELECT 7  
   #define PIN_SENSOR_2_SELECT 6  
@@ -173,8 +181,8 @@ Adafruit_USBD_HID usb_hid;
 #endif
 
 // Button state polling/tracking
-const char buttonNames[] = { MOUSE_BUTTON_LEFT, MOUSE_BUTTON_RIGHT, MOUSE_BUTTON_MIDDLE };
-const int buttonPins[] = { PIN_BUTTON_LEFT, PIN_BUTTON_RIGHT,  PIN_BUTTON_MIDDLE };
+const char buttonNames[] = { MOUSE_BUTTON_LEFT, MOUSE_BUTTON_RIGHT, MOUSE_BUTTON_MIDDLE, MOUSE_BUTTON_BACKWARD, MOUSE_BUTTON_FORWARD };
+const int buttonPins[] = { PIN_BUTTON_LEFT, PIN_BUTTON_RIGHT,  PIN_BUTTON_MIDDLE, PIN_BUTTON_BTN4, PIN_BUTTON_BTN5 };
 const int buttonCount = sizeof(buttonPins) / sizeof(buttonPins[0]);
 char buttons;
 
@@ -545,10 +553,12 @@ void setup()
 
   // TinyUSB Setup
   USBDevice.setProductDescriptor("MWTrackball");
-  usb_hid.setPollInterval(2);
+  usb_hid.setPollInterval(1);
   usb_hid.setReportDescriptor(desc_hid_report, sizeof(desc_hid_report));
 
   usb_hid.begin();
+
+  
 
   // wait until device mounted
   while( !USBDevice.mounted() ) delay(1);
@@ -582,7 +592,7 @@ void setup()
   s1.init();
   debugLogger.println(F("Initializing sensor 2:"));
   s2.init();
-  
+
   for(int i=0; i<buttonCount; i++)
   {
       pinMode(buttonPins[i], INPUT_PULLUP);
@@ -648,7 +658,7 @@ void click()
 #ifdef PIN_PIEZO
   pinMode(PIN_PIEZO, OUTPUT);
   // This is MUCH louder than just toggling the high/low once with digitalWrite().
-  tone(PIN_PIEZO, 1500);
+  tone(PIN_PIEZO, reported_cpi);
   clicking = true;
 #endif
 }
@@ -690,7 +700,9 @@ void loop()
     // scaled from the sensor's CPI to units of reported_cpi.
     Vector v1 = s1.motion();
     Vector v2 = s2.motion();
-    
+   //  v1 = -v1;
+    // v2 = -v2;
+   
     // Given the way my design mounts the sensors (with the wire attachment at the top), the 9800 is inverted relative to the others.
     if (s1.sensor_type() == adns::PID_adns9800)
     {
@@ -730,9 +742,11 @@ void loop()
         scroll = scroll_accum / scroll_tick;
         scroll_accum -= scroll * scroll_tick;
 
-        // When we're scrolling, disable x/y movement
-        delta.x = 0;
-        delta.y = 0;
+        #if LOCK_POSITION_WHILE_SCROLLING
+          // When we're scrolling, disable x/y movement
+          delta.x = 0;
+          delta.y = 0;
+        #endif
         // debugLogger.print("Calculated scroll = ");
         // debugLogger.print(scroll);
         // debugLogger.print(", scroll_accum =  ");
@@ -789,6 +803,9 @@ void loop()
         }
       }
     }
+
+
+
 #if SENSOR_DISPLAY
     // Only if the display was found on startup...
     if (display_ready)
@@ -812,6 +829,7 @@ void loop()
   {
     #define CLAMP(val, min, max) (val > max)?max:((val < min)?min:val)
 #if !USE_CUSTOM_HID_DESCRIPTOR
+
       // if (scroll != 0)
       // {
       //   debugLogger.print("reporting wheel = ");
@@ -825,6 +843,21 @@ void loop()
         CLAMP(scroll, SCHAR_MIN, SCHAR_MAX),
         0);
 #else
+
+      #if CPI_ADJUST
+        if(digitalRead(buttonPins[2]) == LOW)
+        {
+          reported_cpi = s1.updateCPI(scroll);
+          reported_cpi = s2.updateCPI(scroll);  
+          //reported_cpi = reported_cpi+scroll+delta.z;
+          //reported_cpi = CLAMP(reported_cpi,0,16000); 
+          //s1.set_cpi(reported_cpi);
+          //s2.set_cpi(reported_cpi);
+          scroll = 0;      
+        }
+      #endif
+
+
 #if USE_16_BIT_DELTAS
     typedef int16_t delta_t;
     const int delta_min = SHRT_MIN;
@@ -853,28 +886,29 @@ void loop()
     {
       .buttons = buttons,
       .x       = delta_t(CLAMP(delta.x, delta_min, delta_max)),
-      .y       = delta_t(CLAMP(delta.y, delta_min, delta_max)),
+      .y       = delta_t(CLAMP(-delta.y, delta_min, delta_max)),
+      
 #if USE_SCROLL_RESOLUTION_MULTIPLIER
       .multiplier = uint8_t(scroll_tick - 1),
       .wheel   = int8_t(CLAMP(delta.z, SCHAR_MIN, SCHAR_MAX)),
-#else
+#else   
       .wheel   = int8_t(CLAMP(scroll, SCHAR_MIN, SCHAR_MAX)),
 #endif
       .pan     = 0
     };
 
-//     if (report.wheel != 0)
-//     {
-//       debugLogger.print("reporting wheel = ");
-//       debugLogger.print(report.wheel);
-// #if USE_SCROLL_RESOLUTION_MULTIPLIER
-//       debugLogger.print(", multiplier = ");
-//       debugLogger.print(report.multiplier);
-// #endif
-//       debugLogger.println("");
-//     }
-
-    (void)tud_hid_report(0, &report, sizeof(report));
+//    if (report.wheel != 0)
+//    {
+//      debugLogger.print("reporting wheel = ");
+//      debugLogger.print(report.wheel);
+//#if USE_SCROLL_RESOLUTION_MULTIPLIER
+//      debugLogger.print(", multiplier = ");
+//      debugLogger.print(report.multiplier);
+//#endif
+//      debugLogger.println("");
+//    }
+//
+   (void)tud_hid_report(0, &report, sizeof(report));
 #endif
   }
 #if SENSOR_DISPLAY  

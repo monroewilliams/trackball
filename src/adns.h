@@ -4,7 +4,7 @@
 // the correct firmware.
 #define ADNS_SUPPORT_ADNS9800 1
 #define ADNS_SUPPORT_PMW3360DM 1
-
+#define ADNS_SUPPORT_PMW3389DM 1
 class adns
 {
 public:
@@ -42,6 +42,9 @@ public:
         PID_pmw3389dm = 0x47,   // This is the product ID from the datasheet, but the code doesn't really support this chip yet.
     };
 
+    void set_cpi(int cpi);
+    int updateCPI(int increment);
+
     // These are all the fields in the burst motion response.
     // All of them are filled in each time motion() is called.
     // Some of them may be useful.
@@ -72,7 +75,7 @@ private:
     void write_reg(byte reg_addr, byte data);
 
     void read_motion_burst();
-    void set_cpi(int cpi);
+    
     void set_snap_angle(byte enable);    
 
     void dispRegisters(void);
