@@ -16,7 +16,7 @@ const int reported_cpi = 2400;
 const int report_Hz = 120;
 
 // Use a custom HID descriptor instead of TUD_HID_REPORT_DESC_MOUSE()
-#define USE_CUSTOM_HID_DESCRIPTOR 1
+#define USE_CUSTOM_HID_DESCRIPTOR 0
 
 // Use HID_USAGE_DESKTOP_RESOLUTION_MULTIPLIER to transmit higher-fidelity scroll reports.
 // Only used if USE_CUSTOM_HID_DESCRIPTOR is also set to 1.
