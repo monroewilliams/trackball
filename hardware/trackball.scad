@@ -1,6 +1,6 @@
 
 // This module prints the full trackball body, with all cutouts.
-full();
+// full();
 
 // This prints the bottom plate. To use it, comment out full() above and uncomment this line.
 // The first argument is the thickness of the bottom cover in mm. I recommend at least 3, for structural integrity.
@@ -57,7 +57,7 @@ sensor_skew_angle=0;
 // 7 - rear overhang (same)
 // 8 - create bottom access cutout
 // 9 - add support
-button_params = [
+example_button_params = [
     // main button (matches mircroswitch-cherry-mx-5-20.stl)
     [110, 27, 12, -5, 7, -3 - 90, 5, 20, true, false],
 
@@ -68,10 +68,16 @@ button_params = [
     [165, 0, 17, 70, 60, 180 + 30, 20, 0, false, false],
 
     // middle finger button (could use mircroswitch-cherry-mx-5-5.stl or an actual keyswitch)
-    // [-25, 20, 17, -15, 30, 0, 0, 0, true, true],
+    [-25, 20, 17, -15, 30, 0, 0, 0, true, true],
 
     // index finger button (could use mircroswitch-cherry-mx-5-5.stl or an actual keyswitch)
-    // [10, -0, 17, 5, 30, 0, 0, 0, true, true],
+    [10, -0, 17, 5, 30, 0, 0, 0, true, true],
+];
+
+button_params = [
+    example_button_params[0],
+    example_button_params[1],
+    example_button_params[2]
 ];
 
 ////////////////////////////////////////////////////////////////

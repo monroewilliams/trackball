@@ -1,11 +1,21 @@
-use <trackball.scad>
+// Using 'include' instead of 'use' here means we can use global definitions from trackball.scad, not just modules.
+include <trackball.scad>
 
+// Uncomment this for quicker interactive renders.
 $fa = 4;
 
-// Useful cheats for testing new components
-bottom = -33.5;
-ball_diameter=57;
-ball_radius=ball_diameter/2;
+// Defines here can override global defines in trackball.scad, so you can change parameters like ball diameter
+// and button positions here.
+// ball_diameter=57;
+
+button_params = [
+    // example_button_params[0],
+    // example_button_params[1],
+    // example_button_params[2],
+    // example_button_params[3],
+    // example_button_params[4]
+];
+
 
 // This renders the full trackball from trackball.scad.
 // full();
@@ -65,20 +75,20 @@ union()
     difference()
     {
         // alternates to the standard body
-        body();
-        // body_minimal();
+        // body();
+        body_minimal();
         // body_standin();
 
         // body();
         ball_cutout();
-        // bearing_cutouts();
-        // sensor_cutouts();
-        // sensor_access_cutouts();
+        bearing_cutouts();
+        sensor_cutouts();
+        sensor_access_cutouts();
         // button_cutouts();
         wire_cutouts();
     }
 
-    ball();
+    // ball();
 }
 
 
