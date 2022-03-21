@@ -1,6 +1,6 @@
 
 // This module prints the full trackball body, with all cutouts.
-full();
+// full();
 
 // This prints the bottom plate. To use it, comment out full() above and uncomment this line.
 // The first argument is the thickness of the bottom cover in mm. I recommend at least 3, for structural integrity.
