@@ -1,6 +1,6 @@
 
 // This module prints the full trackball body, with all cutouts.
-// full();
+full();
 
 // This prints the bottom plate. To use it, comment out full() above and uncomment this line.
 // The first argument is the thickness of the bottom cover in mm. I recommend at least 3, for structural integrity.
@@ -741,7 +741,7 @@ module body_right_rear_cut(params)
     rotate([-params[2], 0, 0])
     union()
     {
-        rotate_extrude(angle=-180)
+        rotate_extrude()
         intersection()
         {  
             offset(-params[6]) 
