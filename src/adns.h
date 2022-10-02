@@ -4,6 +4,7 @@
 // the correct firmware.
 #define ADNS_SUPPORT_ADNS9800 1
 #define ADNS_SUPPORT_PMW3360DM 1
+#define ADNS_SUPPORT_PMW3389DM 1
 
 class adns
 {
@@ -39,7 +40,7 @@ public:
         PID_unknown = 0x00,
         PID_adns9800 = 0x33,
         PID_pmw3360dm = 0x42,
-        PID_pmw3389dm = 0x47,   // This is the product ID from the datasheet, but the code doesn't really support this chip yet.
+        PID_pmw3389dm = 0x47,   // pmw3389 support contributed by https://github.com/JPJrunesJPJ
     };
 
     // These are all the fields in the burst motion response.
@@ -55,6 +56,25 @@ public:
     byte Minimum_Pixel;
     int Shutter;
     int Frame_Period;
+
+    // These are public so that code that wants to do tricky things with dynamic CPI adjustment can use them. 
+    // Make sure you understand how the variables are used internally before you modify them.
+   
+    // This method sets the cpi value which the sensor is asked to report at. 
+    // By default, the initializer will set this to the maximum cpi that the detected model of sensor is capable of.
+    // Calling this changes the hardware registers on the sensor to report at the specified cpi, 
+    // and also uses the current value of report_cpi to recalculate cpi_scale_factor.
+    void set_cpi(int cpi);
+    
+    // This is the cpi that the caller wants to be reported back when calling motion().
+    // The values read from the sensor will be scaled to this cpi.
+    int report_cpi;
+
+    // This is the cpi value that the sensor is currently running at.
+    int current_cpi;
+    
+    // This is the scaling factor used to translate from current_cpi to report_cpi when motion() is called.
+    double cpi_scale_factor;
 
 private:
     // The arduino pin number this chip's chip select is tied to.
@@ -72,15 +92,12 @@ private:
     void write_reg(byte reg_addr, byte data);
 
     void read_motion_burst();
-    void set_cpi(int cpi);
+    
     void set_snap_angle(byte enable);    
 
     void dispRegisters(void);
 
     int product_id;
-    int current_cpi;
-    int report_cpi;
-    double cpi_scale_factor;
 
     int chip_state;
 

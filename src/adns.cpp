@@ -11,7 +11,9 @@
 #ifdef ADNS_SUPPORT_PMW3360DM
   #include "PMW3360DM_firmware.h"
 #endif
-
+#ifdef ADNS_SUPPORT_PMW3389DM
+  #include "PMW3389DM_firmware.h"
+#endif
 
 // Registers
 enum
@@ -95,7 +97,7 @@ static inline int bytes2int(byte h, byte l)
 }
 
   adns::adns(int ncs, int report_cpi)
-      : ncs(ncs), report_cpi(report_cpi)
+      : report_cpi(report_cpi), ncs(ncs)
   {
     chip_state = chip_state_uninitialized;
     product_id = PID_unknown;
@@ -265,6 +267,17 @@ bool adns::upload_firmware()
       write_reg(REG_Configuration_II, 0x20);
     break;
 #endif
+#ifdef ADNS_SUPPORT_PMW3389DM
+    case PID_pmw3389dm:
+      debugLogger.println(F("Uploading PMW3389DM firmware"));
+      firmware_length = firmware_length_pmw3389dm;
+      firmware_data = firmware_data_pmw3389dm;
+
+      // Write 0 to Rest_En bit of Config2 register to disable Rest mode.
+      write_reg(REG_Configuration_II, 0x20);
+    break;
+#endif
+
     default:
       debugLogger.println(F("*** No firmware available for this chip! ***"));
       return false;
@@ -301,6 +314,18 @@ bool adns::upload_firmware()
   switch(product_id)
   {
     case PID_pmw3360dm:
+      // Read the SROM_ID register to verify the ID before any other register reads or writes.
+      read_reg(REG_SROM_ID);
+
+      // Write 0x00 to Config2 register for wired mouse or 0x20 for wireless mouse design.
+      write_reg(REG_Configuration_II, 0x00);
+
+      // set initial CPI resolution
+      // We do this later, using set_cpi().
+      // write_reg(REG_Configuration_I, 0x15);
+    break;
+
+    case PID_pmw3389dm:
       // Read the SROM_ID register to verify the ID before any other register reads or writes.
       read_reg(REG_SROM_ID);
 
@@ -443,6 +468,9 @@ int adns::image_width()
       result = 30;
     break;
     case PID_pmw3360dm:
+      result = 36;
+    break;
+    case PID_pmw3389dm:
       result = 36;
     break;
     default:
