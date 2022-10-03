@@ -10,7 +10,7 @@
 // Various config options
 
 // This is the cpi we will report to the host. It's independent of the sensor's physical CPI.
-const int reported_cpi = 2400;
+const int reported_cpi = 800;
 
 // This is the frequency at which we poll sensors/buttons and send HID reports.
 const int report_Hz = 120;
@@ -691,6 +691,21 @@ void loop()
     // scaled from the sensor's CPI to units of reported_cpi.
     Vector v1 = s1.motion();
     Vector v2 = s2.motion();
+
+    // Useful when debugging sensor scaling
+    // debugLogger.print(F("report_cpi = "));
+    // debugLogger.print(s1.report_cpi);
+    // debugLogger.print(F(", current_cpi = "));
+    // debugLogger.print(s1.current_cpi);
+    // debugLogger.print(F(", cpi_scale_factor = "));
+    // debugLogger.print(s1.cpi_scale_factor);
+    // debugLogger.print(F(", x = "));
+    // debugLogger.print(s1.x);
+    // debugLogger.print(F(", y = "));
+    // debugLogger.print(s1.y);
+    // debugLogger.print(F(", v = "));
+    // debugLogger.print(v1);
+    // debugLogger.println("");
     
     // Given the way my design mounts the sensors (with the wire attachment at the top), the 9800 is inverted relative to the others.
     if (s1.sensor_type() == adns::PID_adns9800)

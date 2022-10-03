@@ -34,6 +34,8 @@ enum
   REG_Control                              = 0x0d,    // PMW3360DM only
   REG_Frame_Period_Lower                   = 0x0d,    // ADNS-9800 only
   REG_Frame_Period_Upper                   = 0x0e,    // ADNS-9800 only
+  REG_Resolution_H                         = 0x0e,    // PMW3389-only name
+  REG_Resolution_L                         = 0x0f,    // PMW3389-only name
   REG_Configuration_I                      = 0x0f,
   REG_Configuration_II                     = 0x10,
   REG_Angle_Tune                           = 0x11,    // PMW3360DM only
@@ -96,12 +98,14 @@ static inline int bytes2int(byte h, byte l)
   return result;
 }
 
-  adns::adns(int ncs, int report_cpi)
-      : report_cpi(report_cpi), ncs(ncs)
-  {
-    chip_state = chip_state_uninitialized;
-    product_id = PID_unknown;
-  }
+#define CLAMP(val, min, max) (val > max)?max:((val < min)?min:val)
+
+adns::adns(int ncs, int report_cpi)
+    : report_cpi(report_cpi), ncs(ncs)
+{
+  chip_state = chip_state_uninitialized;
+  product_id = PID_unknown;
+}
 
 
 bool adns::init ()
@@ -445,13 +449,53 @@ void adns::set_cpi(int cpi)
     cpi_scale_factor = report_cpi;
     cpi_scale_factor /= cpi;
 
-    cpi /= 200;
-    if (cpi < 1)
-      cpi = 1;
-    else if (cpi > 0x29)
-      cpi = 0x29;
-      
-    write_reg(REG_Configuration_I, cpi);
+    debugLogger.print(F("set_cpi(): cpi = "));
+    debugLogger.print(cpi);
+    debugLogger.print(F(", report_cpi = "));
+    debugLogger.println(report_cpi);
+    debugLogger.print(F(", cpi_scale_factor = "));
+    debugLogger.print(cpi_scale_factor);
+
+    // Setting the sensor cpi differs by sensor model.
+    switch(product_id)
+    {
+      case PID_adns9800:
+        // The ADNS-9800 datasheet says that the value of REG_Configuration_I specifies the resolution in units of 50 cpi,
+        //     with a minimum of 0x01 (50 cpi) and a maximum of 0xA4 (8200cpi).
+        cpi /= 50;
+        cpi = CLAMP(cpi, 1, 0xA4);
+        write_reg(REG_Configuration_I, cpi);
+        debugLogger.print(F(", REG_Configuration_I = 0x"));
+        debugLogger.println(cpi,HEX);
+      break;
+      case PID_pmw3360dm:
+        // The pmw3360DM datasheet I have defines register 0x0F as "Config1", but does not specifically define allowable bit values.
+        //     It does say that the chip has "selectable resolutions up to 12000cpi with 100cpi step size", and that the default value
+        //     for the register is 0x31.
+        cpi /= 100;
+        cpi = CLAMP(cpi, 1, (12000 / 100));
+        write_reg(REG_Configuration_I, cpi);
+        debugLogger.print(F(", REG_Configuration_I = 0x"));
+        debugLogger.println(cpi,HEX);
+      break;
+      case PID_pmw3389dm:
+        // The pmw3389DM datasheet I have defines register 0x0F as "Resolution_L" and register 0x0E as "Resolution_H", and also does not
+        //     define allowable values. It says that the chip has "selectable resolutions up to 16000CPI with 50CPI step size", and shows
+        //     default values of 0x42 for Resolution_L and 0x0 for Resolution_H.
+        //     16000 / 50 comes out to 320 (> 255), so it makes sense that they would need an additional 8 bit register for the full range.
+        cpi /= 50;
+        cpi = CLAMP(cpi, 1, (16000 / 50));
+        write_reg(REG_Resolution_L, cpi & 0x00FF);
+        write_reg(REG_Resolution_H, cpi >> 8);
+        debugLogger.print(F(", REG_Resolution_L = 0x"));
+        debugLogger.println(cpi & 0x00FF,HEX);
+        debugLogger.print(F(", REG_Resolution_H = 0x"));
+        debugLogger.println(cpi >> 8,HEX);
+      break;
+      default:
+      break;
+    }
+    debugLogger.println("");
 }
 
 void adns::set_snap_angle(byte enable)
