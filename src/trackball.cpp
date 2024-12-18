@@ -154,7 +154,7 @@ Adafruit_USBD_HID usb_hid;
   #define PIN_SENSOR_2_SELECT 19  
 #endif  
 
-#if defined(SEEED_XIAO_M0) || defined(ARDUINO_QTPY_M0)
+#if defined(PINS_QTPY)
   // Pin assignments on Seeeduino XIAO/Adafruit QT Py:
   // piezo speaker +
   #define PIN_PIEZO 3
