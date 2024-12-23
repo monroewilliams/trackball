@@ -157,14 +157,22 @@ Adafruit_USBD_HID usb_hid;
 #if defined(PINS_QTPY)
   // Pin assignments on Seeeduino XIAO/Adafruit QT Py:
   // piezo speaker +
-  #define PIN_PIEZO 3
+  #define PIN_PIEZO A3
   // Mouse button inputs
-  #define PIN_BUTTON_LEFT 0 
-  #define PIN_BUTTON_RIGHT 1 
-  #define PIN_BUTTON_MIDDLE 2 
-  // Select pins for sensors
-  #define PIN_SENSOR_1_SELECT 7  
-  #define PIN_SENSOR_2_SELECT 6  
+  #define PIN_BUTTON_LEFT A0 
+  #define PIN_BUTTON_RIGHT A1 
+  #define PIN_BUTTON_MIDDLE A2 
+
+  // SPI Select pins for sensors
+  // Sadly, these have different/incompatible definitions on the QT Py RP2040.
+  #if defined(PINS_QTPY_RP2040)
+    #define PIN_SENSOR_1_SELECT PIN_SERIAL2_RX  
+    #define PIN_SENSOR_2_SELECT PIN_SERIAL2_TX  
+  #else
+    #define PIN_SENSOR_1_SELECT A7  
+    #define PIN_SENSOR_2_SELECT A6  
+  #endif
+
 #endif
 
 #if defined(PIN_NEOPIXEL)
@@ -490,6 +498,7 @@ size_t DebugLogger::write(uint8_t c)
   if (tud_cdc_connected())
   {
     result = Serial.write(c);
+    yield();
   }
 #endif
 
@@ -511,6 +520,7 @@ size_t DebugLogger::write(const uint8_t *buffer, size_t size)
   if (tud_cdc_connected())
   {
     result = Serial.write(buffer, size);
+    yield();
   }
 #endif
 
@@ -627,6 +637,13 @@ void setup()
 #endif
 
 #if defined(PIN_NEOPIXEL)
+
+#if defined(NEOPIXEL_POWER)
+  // Turn on power to the neopixel
+  pinMode(NEOPIXEL_POWER, OUTPUT);
+  digitalWrite(NEOPIXEL_POWER, HIGH);
+#endif
+
   pixel.begin();  // initialize the pixel
 
   // and light it up
