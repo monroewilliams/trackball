@@ -647,7 +647,7 @@ void setup()
   pixel.begin();  // initialize the pixel
 
   // and light it up
-  pixel.setPixelColor(0, 128, 0, 255);
+  pixel.setPixelColor(0, 2, 0, 4);
   pixel.show();
 #endif
 
