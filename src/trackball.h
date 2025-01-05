@@ -3,8 +3,8 @@ class DebugLogger: public Print
 {
 public:
 	// Print subclass methods
-    virtual size_t write(uint8_t);
-    virtual size_t write(const uint8_t *buffer, size_t size);
+    size_t write(uint8_t) override;
+    size_t write(const uint8_t *buffer, size_t size) override;
 
 	// Other stuff
 	// Returns true iff the log is connected to something.

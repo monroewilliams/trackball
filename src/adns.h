@@ -6,10 +6,32 @@
 #define ADNS_SUPPORT_PMW3360DM 1
 #define ADNS_SUPPORT_PMW3389DM 1
 
+// Uncomment this (or define this symbol using build_flags in platformio.ini) to use the Adafruit_SPIDevice abstraction from the Adafrit BusIO library.
+// This _should_ allow the use of software SPI if needed, although I'm having difficulty getting it to work properly on rp2040.
+// #define ADNS_USE_SPIDEVICE_ABSTRACTION
+
+#if defined(ADNS_USE_SPIDEVICE_ABSTRACTION)
+#include <Adafruit_SPIDevice.h>
+#endif
+
 class adns
 {
 public:
-    adns(int ncs, int report_cpi);
+    // Set up using the default SPI device
+    adns(int8_t ncs, int report_cpi);
+    // Set up using a specific SPI device
+    adns(int8_t ncs, int report_cpi, SPIClass &spi);
+
+#if defined(ADNS_USE_SPIDEVICE_ABSTRACTION)
+    // Set up using software SPI
+    adns(int8_t ncs, int report_cpi, int8_t sck, int8_t miso, int8_t mosi);
+#endif
+
+    // Create a dummy instance which does nothing (useful for testing, perhaps)
+    adns();
+
+    ~adns();
+
     // Sets up the chip select for this instance and initializes the chip (upload firmware, etc).
     // Returns true if successful.
     bool init ();
@@ -77,15 +99,21 @@ public:
     double cpi_scale_factor;
 
 private:
-    // The arduino pin number this chip's chip select is tied to.
+    // SPI device abstraction
+#if defined(ADNS_USE_SPIDEVICE_ABSTRACTION)
+    Adafruit_SPIDevice *spi_dev;
+#else
     int ncs;
+    SPISettings settings;
+    SPIClass *spi_dev;
+#endif
 
+    void common_construct();
     void reset();
     
     bool upload_firmware();
     void enable_laser();
-    // default to 2MHz bus speed for most transactions
-    void com_begin(uint32_t clock = 2000000);
+    void com_begin(bool fast = false);
     void com_end();
 
     byte read_reg(byte reg_addr);

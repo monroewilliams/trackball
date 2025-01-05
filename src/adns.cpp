@@ -1,5 +1,5 @@
+#include <Arduino.h>
 #include <SPI.h>
-#include <avr/pgmspace.h>
 
 #include "trackball.h"
 #include "Vector.h"
@@ -81,6 +81,7 @@ enum
     mcs_tSCLK_NCS_read = 1,  // SCLK to NCS inactive (for read operation) (actually 120 nanoseconds)
     mcs_tSCLK_NCS_write = 20, // SCLK to NCS inactive (for read operation)
     mcs_tBEXIT = 1,           // NCS inactive after motion burst (actually 500 nanoseconds)
+    mcs_tSRAD_MOTBR = 35,      // From rising SCLK for last bit of the address byte, to falling SCLK for first bit of data being read. Applicable for Burst Mode Motion Read only.
 };
 
 enum
@@ -100,25 +101,96 @@ static inline int bytes2int(byte h, byte l)
 
 #define CLAMP(val, min, max) (val > max)?max:((val < min)?min:val)
 
-adns::adns(int ncs, int report_cpi)
-    : report_cpi(report_cpi), ncs(ncs)
+static const uint32_t bitrate = 200000;
+
+adns::adns(int8_t ncs, int report_cpi)
+    : report_cpi(report_cpi)
+#if !defined(ADNS_USE_SPIDEVICE_ABSTRACTION)
+    , ncs(ncs)
+    , settings(bitrate, MSBFIRST, SPI_MODE3)
+#endif
+{  
+#if defined(ADNS_USE_SPIDEVICE_ABSTRACTION)
+  spi_dev = new Adafruit_SPIDevice(ncs, bitrate, SPI_BITORDER_MSBFIRST, SPI_MODE3);
+#else
+  spi_dev = &SPI;
+#endif
+  common_construct();
+}
+
+adns::adns(int8_t ncs, int report_cpi, SPIClass &spi)
+    : report_cpi(report_cpi)
+#if !defined(ADNS_USE_SPIDEVICE_ABSTRACTION)
+    , ncs(ncs)
+    , settings(bitrate, MSBFIRST, SPI_MODE3)
+#endif
+{
+#if defined(ADNS_USE_SPIDEVICE_ABSTRACTION)
+  spi_dev = new Adafruit_SPIDevice(ncs, bitrate, SPI_BITORDER_MSBFIRST, SPI_MODE3, &spi);
+#else
+  spi_dev = &spi;
+#endif
+  common_construct();
+}
+
+#if defined(ADNS_USE_SPIDEVICE_ABSTRACTION)
+adns::adns(int8_t ncs, int report_cpi, int8_t sck, int8_t miso, int8_t mosi)
+    : report_cpi(report_cpi)
+{
+  // Software SPI seems to want a slower clock to function correctly?
+  spi_dev = new Adafruit_SPIDevice(ncs, sck, miso, mosi, 100000, SPI_BITORDER_MSBFIRST, SPI_MODE3);
+  common_construct();
+}
+#endif
+
+adns::adns(void)
+    : report_cpi(0)
+#if !defined(ADNS_USE_SPIDEVICE_ABSTRACTION)
+    , ncs(-1)
+    , settings(bitrate, MSBFIRST, SPI_MODE3)
+#endif
+{
+  spi_dev = NULL;
+  common_construct();
+}
+
+void adns::common_construct()
 {
   chip_state = chip_state_uninitialized;
   product_id = PID_unknown;
 }
 
+adns::~adns()
+{
+#if defined(ADNS_USE_SPIDEVICE_ABSTRACTION)
+  // In this case, spi_dev is an Adafruit_SPIDevice we allocated, so we need to clean it up.
+  if (spi_dev)
+    delete spi_dev;
+#endif
+}
 
 bool adns::init ()
 {
-  pinMode (ncs, OUTPUT);
+  if (!spi_dev)
+  {
+    debugLogger.printf("adns::init: dummy device\n");
+    return false;
+  }
+
+#if !defined(ADNS_USE_SPIDEVICE_ABSTRACTION)
+  pinMode(ncs, OUTPUT);
+  digitalWrite(ncs, HIGH);
+#endif
+
+  spi_dev->begin();
+
   chip_state = chip_state_uninitialized;
 
   reset();
 
   // Read the product ID, so we know which firmware to use.
   product_id = read_reg(REG_Product_ID);
-  debugLogger.print(F("Read product id: 0x"));
-  debugLogger.println(product_id, HEX);
+  debugLogger.printf("Read product id: 0x%02x\n", int(product_id));
   delay(1);
 
   // upload the firmware
@@ -129,7 +201,7 @@ bool adns::init ()
 
   enable_laser();
 
-  debugLogger.println(F("Chip initialized"));
+  debugLogger.printf("Chip initialized\n");
 
   // By default, run the sensor at its maximum CPI value.  
   switch(product_id)
@@ -161,6 +233,11 @@ bool adns::init ()
 
 void adns::reset()
 {
+  if (!spi_dev)
+  {
+      return;
+  }
+
   com_end(); // ensure that the SPI port is reset
   com_begin(); // ensure that the SPI port is reset
   com_end(); // ensure that the SPI port is reset
@@ -191,16 +268,31 @@ void adns::enable_laser()
   }
 }
 
-void adns::com_begin(uint32_t clock)
+void adns::com_begin(bool fast)
 {
-  SPI.beginTransaction(SPISettings(clock, MSBFIRST, SPI_MODE3));
+#if defined(ADNS_USE_SPIDEVICE_ABSTRACTION)
+  spi_dev->beginTransactionWithAssertingCS();
+#else
+  if (fast)
+  {
+      spi_dev->beginTransaction(SPISettings(3200000, MSBFIRST, SPI_MODE3));
+  }
+  else
+  {
+    spi_dev->beginTransaction(settings);
+  }
   digitalWrite(ncs, LOW);
+#endif
 }
 
 void adns::com_end()
 {
+#if defined(ADNS_USE_SPIDEVICE_ABSTRACTION)
+  spi_dev->endTransactionWithDeassertingCS();
+#else
   digitalWrite(ncs, HIGH);
-  SPI.endTransaction();
+  spi_dev->endTransaction();
+#endif
 }
 
 byte adns::read_reg(byte reg_addr)
@@ -208,10 +300,10 @@ byte adns::read_reg(byte reg_addr)
   com_begin();
   
   // send adress of the register, with MSBit = 0 to indicate it's a read
-  SPI.transfer(reg_addr & 0x7f );
+  spi_dev->transfer(reg_addr & 0x7f );
   delayMicroseconds(mcs_tSRAD);
   // read data
-  byte data = SPI.transfer(0);
+  byte data = spi_dev->transfer(0);
   
   delayMicroseconds(mcs_tSCLK_NCS_read);
   com_end();
@@ -220,10 +312,7 @@ byte adns::read_reg(byte reg_addr)
   // This is too spammy during normal use, but can be useful when debugging sensor issues.
   if (0)
   {
-      debugLogger.print(F("read register "));
-      debugLogger.print(reg_addr,HEX);
-      debugLogger.print(F(", value = "));
-      debugLogger.println(data,HEX);
+      debugLogger.printf("read register 0x%02x, value = 0x%02x\n", int(reg_addr), int(data));
   }
   
   return data;
@@ -231,12 +320,18 @@ byte adns::read_reg(byte reg_addr)
 
 void adns::write_reg(byte reg_addr, byte data)
 {
+  // This is too spammy during normal use, but can be useful when debugging sensor issues.
+  if (0)
+  {
+      debugLogger.printf("write register 0x%02x, value = 0x%02x\n", int(reg_addr), int(data));
+  }
+
   com_begin();
   
   //send adress of the register, with MSBit = 1 to indicate it's a write
-  SPI.transfer(reg_addr | 0x80 );
+  spi_dev->transfer(reg_addr | 0x80 );
   //sent data
-  SPI.transfer(data);
+  spi_dev->transfer(data);
   
   delayMicroseconds(mcs_tSCLK_NCS_write); // tSCLK-NCS for write operation
   com_end();
@@ -253,7 +348,7 @@ bool adns::upload_firmware()
   {
 #ifdef ADNS_SUPPORT_ADNS9800
     case PID_adns9800:
-      debugLogger.println(F("Uploading ADNS-9800 firmware"));
+      debugLogger.printf("Uploading ADNS-9800 firmware\n");
       firmware_length = firmware_length_adns9800;
       firmware_data = firmware_data_adns9800;
 
@@ -263,7 +358,7 @@ bool adns::upload_firmware()
 #endif
 #ifdef ADNS_SUPPORT_PMW3360DM
     case PID_pmw3360dm:
-      debugLogger.println(F("Uploading PMW3360DM firmware"));
+      debugLogger.printf("Uploading PMW3360DM firmware\n");
       firmware_length = firmware_length_pmw3360dm;
       firmware_data = firmware_data_pmw3360dm;
 
@@ -273,7 +368,7 @@ bool adns::upload_firmware()
 #endif
 #ifdef ADNS_SUPPORT_PMW3389DM
     case PID_pmw3389dm:
-      debugLogger.println(F("Uploading PMW3389DM firmware"));
+      debugLogger.printf("Uploading PMW3389DM firmware\n");
       firmware_length = firmware_length_pmw3389dm;
       firmware_data = firmware_data_pmw3389dm;
 
@@ -283,7 +378,7 @@ bool adns::upload_firmware()
 #endif
 
     default:
-      debugLogger.println(F("*** No firmware available for this chip! ***"));
+      debugLogger.printf("*** No firmware available for this chip! ***\n");
       return false;
     break;
   }
@@ -299,7 +394,7 @@ bool adns::upload_firmware()
   
   // write the SROM file (=firmware data) 
   com_begin();
-  SPI.transfer(REG_SROM_Load_Burst | 0x80); // write burst destination adress
+  spi_dev->transfer(REG_SROM_Load_Burst | 0x80); // write burst destination adress
   delayMicroseconds(15);
   
   // send all bytes of the firmware
@@ -307,13 +402,24 @@ bool adns::upload_firmware()
   for(unsigned int i = 0; i < firmware_length; i++)
   { 
     c = (unsigned char)pgm_read_byte(firmware_data + i);
-    SPI.transfer(c);
+    spi_dev->transfer(c);
     delayMicroseconds(15);
   }
 
   com_end();
 
   delay(10);
+
+#if 1
+  // SROM CRC test
+  write_reg(REG_SROM_Enable, 0x15); 
+  delay(10);
+  int upper = read_reg(REG_Data_Out_Upper);
+  int lower = read_reg(REG_Data_Out_Lower);
+  // The datasheet doesn't specify what the expected value for a successful CRC test is.
+  // A successful test on the 3360 seems to return the value 0xbeef.
+  debugLogger.printf("SROM CRC test result: 0x%02x%02x\n", upper, lower);
+#endif
 
   switch(product_id)
   {
@@ -371,13 +477,13 @@ void adns::dispRegisters(void)
     for(unsigned int rctr=0; rctr<(sizeof(oreg)/sizeof(oreg[0])); rctr++)
     {
       regres = read_reg(oreg[rctr].id);
-      debugLogger.print(oreg[rctr].name);
-      debugLogger.print(" (0x");
-      debugLogger.print(oreg[rctr].id,HEX);
-      debugLogger.print(")\n  = 0x");
-      debugLogger.print(regres,HEX);  
-      debugLogger.print(" / 0b");
-      debugLogger.println(regres,BIN);  
+      debugLogger.printf("%s (0x%02x) = 0x%02x / 0b",
+        oreg[rctr].name,
+        int(oreg[rctr].id),
+        int(regres)
+      );
+      // printf doesn't have a binary conversion, so just use the builtin.
+      debugLogger.println(regres, BIN);  
       delay(1);
     }
   }
@@ -385,13 +491,13 @@ void adns::dispRegisters(void)
 
 Vector adns::motion()
 {
-    if (chip_state != chip_state_motion)
-    {
-      // In capture mode, we have no motion tracking.
-      return Vector(0, 0);
-    }
-    read_motion_burst();
-    return Vector(x * cpi_scale_factor, y * cpi_scale_factor);
+  if (chip_state != chip_state_motion)
+  {
+    // In capture mode, we have no motion tracking.
+    return Vector(0, 0);
+  }
+  read_motion_burst();
+  return Vector(x * cpi_scale_factor, y * cpi_scale_factor);
 }
 
 void adns::read_motion_burst()
@@ -399,15 +505,15 @@ void adns::read_motion_burst()
   byte burst[14];
   
   com_begin();
+
   // Read the burst register to start the transfer
-  SPI.transfer(REG_Motion_Burst & 0x7F );
-  delayMicroseconds(mcs_tSRAD);
-  
+  spi_dev->transfer(REG_Motion_Burst & 0x7F );
+  delayMicroseconds(mcs_tSRAD_MOTBR);
   for (int i = 0; i < 14; i++)
   {
-      burst[i] = SPI.transfer(0x00);
+      burst[i] = spi_dev->transfer(0x00);
   }
-  
+
   com_end();
   delayMicroseconds(mcs_tBEXIT);
   
@@ -426,19 +532,21 @@ void adns::read_motion_burst()
   Shutter = bytes2int(burst[10], burst[11]);
   Frame_Period = bytes2int(burst[12], burst[13]);
 
-  // if (debugLogger.enabled())
-  // {
-  //   debugLogger.print(F("burst motion data:"));
-  //   for (int i = 0; i < 14; i++)
-  //   {
-  //     debugLogger.print(burst[i], HEX);
-  //     debugLogger.print(F(" "));
-  //   }
-  //   debugLogger.print(F(", x = "));
-  //   debugLogger.print(x);
-  //   debugLogger.print(F(", y = "));
-  //   debugLogger.println(y);
-  // }
+  if (debugLogger.enabled())
+  {
+#if 0
+    debugLogger.print(F("burst motion data:"));
+    for (int i = 0; i < 14; i++)
+    {
+      debugLogger.print(burst[i], HEX);
+      debugLogger.print(F(" "));
+    }
+    debugLogger.print(F(", x = "));
+    debugLogger.print(x);
+    debugLogger.print(F(", y = "));
+    debugLogger.println(y);
+#endif
+  }
   
 }
 
@@ -449,12 +557,10 @@ void adns::set_cpi(int cpi)
     cpi_scale_factor = report_cpi;
     cpi_scale_factor /= cpi;
 
-    debugLogger.print(F("set_cpi(): cpi = "));
-    debugLogger.print(cpi);
-    debugLogger.print(F(", report_cpi = "));
-    debugLogger.println(report_cpi);
-    debugLogger.print(F(", cpi_scale_factor = "));
-    debugLogger.print(cpi_scale_factor);
+    debugLogger.printf("set_cpi(): cpi = %d, report_cpi = %d, cpi_scale_factor = %lf",
+      cpi,
+      report_cpi,
+      cpi_scale_factor);
 
     // Setting the sensor cpi differs by sensor model.
     switch(product_id)
@@ -465,8 +571,7 @@ void adns::set_cpi(int cpi)
         cpi /= 50;
         cpi = CLAMP(cpi, 1, 0xA4);
         write_reg(REG_Configuration_I, cpi);
-        debugLogger.print(F(", REG_Configuration_I = 0x"));
-        debugLogger.println(cpi,HEX);
+        debugLogger.printf(", REG_Configuration_I = 0x%02x", cpi);
       break;
       case PID_pmw3360dm:
         // The pmw3360DM datasheet I have defines register 0x0F as "Config1", but does not specifically define allowable bit values.
@@ -475,8 +580,7 @@ void adns::set_cpi(int cpi)
         cpi /= 100;
         cpi = CLAMP(cpi, 1, (12000 / 100));
         write_reg(REG_Configuration_I, cpi);
-        debugLogger.print(F(", REG_Configuration_I = 0x"));
-        debugLogger.println(cpi,HEX);
+        debugLogger.printf(", REG_Configuration_I = 0x%02x", cpi);
       break;
       case PID_pmw3389dm:
         // The pmw3389DM datasheet I have defines register 0x0F as "Resolution_L" and register 0x0E as "Resolution_H", and also does not
@@ -487,15 +591,14 @@ void adns::set_cpi(int cpi)
         cpi = CLAMP(cpi, 1, (16000 / 50));
         write_reg(REG_Resolution_L, cpi & 0x00FF);
         write_reg(REG_Resolution_H, cpi >> 8);
-        debugLogger.print(F(", REG_Resolution_L = 0x"));
-        debugLogger.println(cpi & 0x00FF,HEX);
-        debugLogger.print(F(", REG_Resolution_H = 0x"));
-        debugLogger.println(cpi >> 8,HEX);
+        debugLogger.printf(", REG_Resolution_L = 0x%02x, REG_Resolution_H = 0x%02x",
+          cpi & 0x00FF,
+          cpi >> 8);
       break;
       default:
       break;
     }
-    debugLogger.println("");
+    debugLogger.printf("\n");
 }
 
 void adns::set_snap_angle(byte enable)
@@ -548,6 +651,10 @@ size_t adns::image_data_size()
 
 void adns::begin_image_capture()
 {
+  if (!spi_dev)
+  {
+      return;
+  }
 
   reset();
   enable_laser();
@@ -574,29 +681,43 @@ void adns::read_image(uint8_t *pixels)
   // I suspect it may be a mis-print. This code works on the hardware I have (both adns9800 and pmw3360)
 
   // Bump up the SPI speed a bit for this transaction, since there's a fair bit of data to move.
-  com_begin(8000000);
+  com_begin(true);
+
+  // Since we're touching all the pixels anyway, calculate the min and max values as we read them.
+  uint8_t min = 255;
+  uint8_t max = 0;
 
   // Reading a value from this register starts burst mode.
   // The value of this first read seems to be garbage, so just discard it.
-  SPI.transfer(REG_Pixel_Burst & 0x7f);
+  spi_dev->transfer(REG_Pixel_Burst & 0x7f);
   delayMicroseconds(mcs_tSRAD);
 
     for(size_t i = 0; i < datasize; i++)
     {
-        pixels[i] = SPI.transfer(REG_Pixel_Burst & 0x7F );
-        delayMicroseconds(10);
+        uint8_t cur = spi_dev->transfer(REG_Pixel_Burst & 0x7F );
+        pixels[i] = cur;
+        if (cur < min) min = cur;
+        if (cur > max) max = cur;
+        delayMicroseconds(5);
     }
 
   delayMicroseconds(mcs_tBEXIT);
   com_end();
+
+  Minimum_Pixel = min;
+  Maximum_Pixel = max;
 }
 
 void adns::end_image_capture()
 {
-    // Just reinitialize the sensor and restore the previously set CPI.
-    int previous_cpi = current_cpi;
-    init();
-    set_cpi(previous_cpi);
+  if (!spi_dev)
+  {
+      return;
+  }
+  // Just reinitialize the sensor and restore the previously set CPI.
+  int previous_cpi = current_cpi;
+  init();
+  set_cpi(previous_cpi);
 }
 
 

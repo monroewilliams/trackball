@@ -6,6 +6,11 @@
 #include "Vector.h"
 #include "adns.h"
 
+#if defined(PIN_NEOPIXEL)
+  #include <Adafruit_NeoPixel.h>
+  Adafruit_NeoPixel pixel(1, PIN_NEOPIXEL);
+#endif
+
 ////////////////////////////////////////
 // Various config options
 
@@ -27,20 +32,19 @@ const int report_Hz = 120;
 #define USE_16_BIT_DELTAS 1
 
 // Enable serial port debugging output
-#define SERIAL_DEBUG 0
+// #define SERIAL_DEBUG
 
 // These give the option to connect a display and toggle between regular operation and displaying the images from the sensors.
 // 0 - no display
 // 1 - SSD1327 display on the i2c bus  ( https://www.adafruit.com/product/4741 )
 // 2 - 128x128 SSD1351 on the SPI bus  ( https://www.amazon.com/gp/product/B07DB5YFGW )
-#define SENSOR_DISPLAY 0
+// #define SENSOR_DISPLAY 1
 
 // Use this to start out in sensor display mode. 
 // Useful if you're just testing a sensor and don't have any buttons hooked up yet.
 // Only used if SENSOR_DISPLAY is non-zero
-#define SENSOR_DISPLAY_ON_STARTUP 0
+// #define SENSOR_DISPLAY_ON_STARTUP
 
-//
 ///////////////////////////////////////
 
 #if SENSOR_DISPLAY == 1
@@ -52,6 +56,121 @@ const int report_Hz = 120;
   #define SENSOR_DISPLAY_SPI 1
   #include <Adafruit_SSD1351.h>
 #endif
+
+
+/*
+  Common pin assignments:
+  standard SPI (MOSI, MISO, SCLK)
+  VCC - sensor VI
+  GND - sensor DG & AG
+*/
+
+#ifdef ARDUINO_AVR_PROMICRO8
+  #include <avr/pgmspace.h>
+  // Pin assignments on Sparkfun Pro Micro:
+  // piezo speaker +
+  #define PIN_PIEZO 3
+  // Mouse button inputs
+  #define PIN_BUTTON_LEFT 4 
+  #define PIN_BUTTON_MIDDLE 5 
+  #define PIN_BUTTON_RIGHT 6 
+  // Select pins for sensors
+  #define PIN_SENSOR_1_SELECT 18  
+  #define PIN_SENSOR_2_SELECT 19  
+#endif  
+
+#if defined(PINS_QTPY)
+  // Pin assignments on Seeeduino XIAO/Adafruit QT Py:
+  // piezo speaker +
+  #define PIN_PIEZO A3
+  // Mouse button inputs
+  #define PIN_BUTTON_LEFT A0 
+  #define PIN_BUTTON_RIGHT A1 
+  #define PIN_BUTTON_MIDDLE A2 
+
+  // SPI Select pins for sensors
+  // Sadly, these have different/incompatible definitions on the QT Py RP2040.
+  #if defined(PINS_QTPY_RP2040)
+    #define PIN_SENSOR_1_SELECT PIN_SERIAL2_RX  
+    #define PIN_SENSOR_2_SELECT PIN_SERIAL2_TX  
+  #else
+    #define PIN_SENSOR_1_SELECT A7  
+    #define PIN_SENSOR_2_SELECT A6  
+  #endif
+
+  // Testing: use software SPI
+  // #define SENSOR_1_SOFTWARE_SPI     PIN_SPI_SCK, PIN_SPI_MISO, PIN_SPI_MOSI
+  // #define SENSOR_2_SOFTWARE_SPI     PIN_SPI_SCK, PIN_SPI_MISO, PIN_SPI_MOSI
+
+  // Defs for the Wire interface for the display
+  // It will be plugged into the Stemma Qt plug
+  #if defined(PINS_QTPY_RP2040)
+    // On this board, the plug is Wire1
+    #define DISPLAY_PIN_SDA PIN_WIRE1_SDA
+    #define DISPLAY_PIN_SCL PIN_WIRE1_SCL
+    #define DISPLAY_WIRE_DEVICE Wire1
+  #else
+    // On the original QT PY, the plug is just Wire
+    #define DISPLAY_PIN_SDA PIN_WIRE_SDA
+    #define DISPLAY_PIN_SCL PIN_WIRE_SCL
+    #define DISPLAY_WIRE_DEVICE Wire
+  #endif
+
+#elif defined(PINS_CUSTOM_BOARD)
+  // PIN_PIEZO is already defined in the variant's pins_arduino.h
+
+   // Mouse button inputs
+  #define PIN_BUTTON_LEFT PIN_B18 
+  #define PIN_BUTTON_RIGHT PIN_B19 
+  #define PIN_BUTTON_MIDDLE PIN_B20 
+
+// for software SPI:
+// #define PIN_SPI0_MISO  (4u)
+// #define PIN_SPI0_MOSI  (5u)
+// #define PIN_SPI0_SCK   (2u)
+
+
+  // SPI Select pins for sensors
+
+  // sensor 1
+#if 0
+  // software SPI
+  #define PIN_SENSOR_1_SELECT (6u)  
+  #define SENSOR_1_SOFTWARE_SPI     (2u), (4u), (5u)
+#else
+  // hardware SPI on SPI1.13 connector
+  #define PIN_SENSOR_1_SELECT PIN_SPI1_SS
+  #define SENSOR_1_SPI_DEVICE SPI1
+#endif
+
+  // sensor 2
+#if 0
+  // software SPI on SPI0.8 connector (which actually uses gpio7 as its CS)
+  #define PIN_SENSOR_2_SELECT (7u)  
+  #define SENSOR_2_SOFTWARE_SPI     (2u), (4u), (5u)
+
+  // software SPI on the breakout connector
+  // #define PIN_SENSOR_2_SELECT (26u)  
+  // #define SENSOR_2_SOFTWARE_SPI     (29u), (28u), (27u)
+#else
+  // If we don't define PIN_SENSOR_2_SELECT, s2 is initialized as a no-op dummy sensor.
+  // hardware SPI (not actually connected)
+  // #define PIN_SENSOR_2_SELECT (7u)
+#endif
+
+  // Defs for the Wire interface for the display
+  // It will be plugged into the Stemma Qt plug, a.k.a. Wire
+  #define DISPLAY_PIN_SDA PIN_WIRE0_SDA
+  #define DISPLAY_PIN_SCL PIN_WIRE0_SCL
+  #define DISPLAY_WIRE_DEVICE Wire
+
+#endif
+
+// Button state polling/tracking
+const char buttonNames[] = { MOUSE_BUTTON_LEFT, MOUSE_BUTTON_RIGHT, MOUSE_BUTTON_MIDDLE };
+const int buttonPins[] = { PIN_BUTTON_LEFT, PIN_BUTTON_RIGHT,  PIN_BUTTON_MIDDLE };
+const int buttonCount = sizeof(buttonPins) / sizeof(buttonPins[0]);
+char buttons;
 
 // HID report descriptor using TinyUSB's template
 // Single Report (no ID) descriptor
@@ -133,59 +252,6 @@ uint8_t const desc_hid_report[] =
 // USB HID object
 Adafruit_USBD_HID usb_hid;
 
-/*
-  Common pin assignments:
-  standard SPI (MOSI, MISO, SCLK)
-  VCC - sensor VI
-  GND - sensor DG & AG
-*/
-
-#ifdef ARDUINO_AVR_PROMICRO8
-  #include <avr/pgmspace.h>
-  // Pin assignments on Sparkfun Pro Micro:
-  // piezo speaker +
-  #define PIN_PIEZO 3
-  // Mouse button inputs
-  #define PIN_BUTTON_LEFT 4 
-  #define PIN_BUTTON_MIDDLE 5 
-  #define PIN_BUTTON_RIGHT 6 
-  // Select pins for sensors
-  #define PIN_SENSOR_1_SELECT 18  
-  #define PIN_SENSOR_2_SELECT 19  
-#endif  
-
-#if defined(PINS_QTPY)
-  // Pin assignments on Seeeduino XIAO/Adafruit QT Py:
-  // piezo speaker +
-  #define PIN_PIEZO A3
-  // Mouse button inputs
-  #define PIN_BUTTON_LEFT A0 
-  #define PIN_BUTTON_RIGHT A1 
-  #define PIN_BUTTON_MIDDLE A2 
-
-  // SPI Select pins for sensors
-  // Sadly, these have different/incompatible definitions on the QT Py RP2040.
-  #if defined(PINS_QTPY_RP2040)
-    #define PIN_SENSOR_1_SELECT PIN_SERIAL2_RX  
-    #define PIN_SENSOR_2_SELECT PIN_SERIAL2_TX  
-  #else
-    #define PIN_SENSOR_1_SELECT A7  
-    #define PIN_SENSOR_2_SELECT A6  
-  #endif
-
-#endif
-
-#if defined(PIN_NEOPIXEL)
-  #include <Adafruit_NeoPixel.h>
-  Adafruit_NeoPixel pixel(1, PIN_NEOPIXEL);
-#endif
-
-// Button state polling/tracking
-const char buttonNames[] = { MOUSE_BUTTON_LEFT, MOUSE_BUTTON_RIGHT, MOUSE_BUTTON_MIDDLE };
-const int buttonPins[] = { PIN_BUTTON_LEFT, PIN_BUTTON_RIGHT,  PIN_BUTTON_MIDDLE };
-const int buttonCount = sizeof(buttonPins) / sizeof(buttonPins[0]);
-char buttons;
-
 const int report_microseconds = 1000000 / report_Hz;
 
 // The coordinate system here is a bit wonky -- in the final HID report, +X points right and +Y points "down" (towards the user),
@@ -223,8 +289,26 @@ float st[3][4] =
 };
 
 // sensor hardware abstraction
-adns s1(PIN_SENSOR_1_SELECT, reported_cpi);
-adns s2(PIN_SENSOR_2_SELECT, reported_cpi);
+adns s1(PIN_SENSOR_1_SELECT, reported_cpi
+#if defined(SENSOR_1_SPI_DEVICE)
+  , SENSOR_1_SPI_DEVICE
+#elif defined(SENSOR_1_SOFTWARE_SPI)
+  , SENSOR_1_SOFTWARE_SPI
+#endif
+);
+
+#if defined(PIN_SENSOR_2_SELECT)
+  adns s2(PIN_SENSOR_2_SELECT, reported_cpi
+  #if defined(SENSOR_2_SPI_DEVICE)
+    , SENSOR_2_SPI_DEVICE
+  #elif defined(SENSOR_2_SOFTWARE_SPI)
+    , SENSOR_2_SOFTWARE_SPI
+  #endif
+  );
+#else
+  // make s2 a dummy sensor, for testing
+  adns s2;
+#endif
 
 // scrolling
 const int scroll_tick = 64;
@@ -232,7 +316,7 @@ float scroll_accum = 0;
 
 
 #if SENSOR_DISPLAY == 1
-  Adafruit_SSD1327 display(128, 128, &Wire, -1, 1000000UL);
+  Adafruit_SSD1327 display(128, 128, &DISPLAY_WIRE_DEVICE, -1, 2000000UL);
   const int display_address = SSD1327_I2C_ADDRESS;
   const uint16_t text_color = SSD1327_WHITE;
   const uint16_t text_bg = SSD1327_BLACK;
@@ -245,9 +329,10 @@ float scroll_accum = 0;
   const uint16_t text_bg = 0x0000;
 #endif
 
-#if SENSOR_DISPLAY
+#if defined(SENSOR_DISPLAY)
 bool sensor_display_mode = false;
 bool display_ready = false;
+bool sensor_display_zoom_select = false;
 
 void reset_display()
 {
@@ -261,7 +346,7 @@ void reset_display()
   display.setTextColor(text_color, text_bg);
   display.setCursor(0,0);
   // Leave room for live updates
-  display.print("\n\n\n\n");
+  display.print("");
   if (sensor_display_mode) {
     display.print(F("Press all 3 buttons\ntogether to return\nto trackball mode."));
 #if defined(SENSOR_DISPLAY_GRAY4)
@@ -278,7 +363,7 @@ void reset_display()
 #endif
 }
 
-void draw_sensor_pixels(int x, int y, uint8_t *pixels, int width, int height, size_t src_rowbytes, bool zoom)
+void draw_sensor_pixels(int x, int y, uint8_t *pixels, int width, int height, size_t src_rowbytes, bool zoom, uint8_t min, uint8_t max)
 {
 
 #if defined(SENSOR_DISPLAY_GRAY4)
@@ -287,15 +372,6 @@ void draw_sensor_pixels(int x, int y, uint8_t *pixels, int width, int height, si
   uint16_t lut[256];
 #endif
   // Scale the data to show maxumum contrast using the 16 gray levels available.
-  // Scan the data and find the min and max pixel values
-  uint8_t min = 255;
-  uint8_t max = 0;
-  for (int i = 0; i < 900; i++)
-  {
-    uint8_t cur = pixels[i];
-    if (cur < min) min = cur;
-    if (cur > max) max = cur;
-  }
   // Scale the pixels so that the darkest gets value 0 and the brightest gets 15
   int range = max - min;
   uint8_t offset = min;
@@ -401,26 +477,48 @@ void display_sensors()
   // This reads the pixels off of both sensors, and draws them in the lower left and lower right corners of the display.
   // If there's room to do so without them overlapping, it magnifies both images by 2x.
   // If not, it only magnifies the one from s1.
-  unsigned long read1 = micros();
   int width1 = s1.image_width();
   int height1 = s1.image_height();
   int width2 = s2.image_width();
   int height2 = s2.image_height();
 
-  s1.read_image(pixels);
-  unsigned long render1 = micros();
+  int zoom1 = 1;
+  int zoom2 = 1;
+  unsigned long read1 = micros();
+  unsigned long render1 = read1;
 
-  bool zoom1 = (height1 * 2 < display.height()) && ((width1 * 2) + width2 < display.width());
-  draw_sensor_pixels(0, display.height() - (height1 * 2), pixels, width1, height1, width1, zoom1);
+  if (width1 != 0)
+  {
+    // Sensor 1 is present
+    s1.read_image(pixels);
+    render1 = micros();
+
+    if (!sensor_display_zoom_select &&
+        ((height1 * 2) + 2 < display.height()) &&
+        ((width1 * 2) + 2 + width2 + 2 < display.width()))
+    {
+      zoom1 = 2;
+    }
+
+    int x1 = 0;
+    int y1 = display.height() - ((height1 * zoom1) + 2);
+    draw_sensor_pixels(x1 + 1, y1 + 1, pixels, width1, height1, width1, zoom1 == 2, s1.Minimum_Pixel, s1.Maximum_Pixel);
+    display.drawRect(x1, y1, (width1 * zoom1) + 2, (height1 * zoom1) + 2, text_color);
+  }
   unsigned long read2 = micros();
+  unsigned long render2 = read2;
 
-  s2.read_image(pixels);
-  unsigned long render2 = micros();
+  if (width2 != 0)
+  {
+    s2.read_image(pixels);
+    render2 = micros();
 
-  bool zoom2 = (height2 * 2 < display.height()) && ((width1 * (zoom1?2:1)) + (width2 * 2) < display.width());
-  int x2 = display.width() - (width2 * (zoom2?2:1));
-  int y2 = display.width() - (height2 * (zoom2?2:1));
-  draw_sensor_pixels(x2, y2, pixels, width2, height2, width2, zoom2);
+    zoom2 = (((height2 * 2) + 2 < display.height()) && ((width1 * zoom1) + 2 + (width2 * 2) + 2 < display.width()))?2:1;
+    int x2 = display.width() - ((width2 * zoom2) + 2);
+    int y2 = display.height() - ((height2 * zoom2) + 2);
+    draw_sensor_pixels(x2 + 1, y2 + 1, pixels, width2, height2, width2, zoom2 == 2, s2.Minimum_Pixel, s2.Maximum_Pixel);
+    display.drawRect(x2, y2, (width2 * zoom2) + 2, (height2 * zoom2) + 2, text_color);
+  }
 
   unsigned long xfer = micros();
 #if defined(SENSOR_DISPLAY_GRAY4)
@@ -428,12 +526,21 @@ void display_sensors()
 #endif
   unsigned long end = micros();
 
-  debugLogger.print(F("read took "));
-  debugLogger.print((render1 - read1) + (render2 - read2));
-  debugLogger.print(F(", render took "));
-  debugLogger.print((read2 - render1) + (xfer - render2));
-  debugLogger.print(F(", xfer took "));
-  debugLogger.println(end - xfer);
+  display.setCursor(0,24);
+  display.printf("s1: 0x%02x - 0x%02x\ns2: 0x%02x - 0x%02x", 
+    s1.Minimum_Pixel, s1.Maximum_Pixel,
+    s2.Minimum_Pixel, s2.Maximum_Pixel);
+
+  // Only log if at least one of the sensors is online
+  if ((width1 != 0) || (width2 != 0))
+  {
+    debugLogger.print(F("read took "));
+    debugLogger.print((render1 - read1) + (render2 - read2));
+    debugLogger.print(F(", render took "));
+    debugLogger.print((read2 - render1) + (xfer - render2));
+    debugLogger.print(F(", xfer took "));
+    debugLogger.println(end - xfer);
+  }
 }
 
 void set_sensor_display(bool enable)
@@ -468,16 +575,16 @@ bool i2c_probe_bus()
   // Specifically, it returns false positives and sometimes hangs the device.
 
   // If i2c is connected, both pins should have pull-up resistors, which means they will read high.
-  pinMode(PIN_WIRE_SDA, INPUT);
-  pinMode(PIN_WIRE_SCL, INPUT);
-  return (digitalRead(PIN_WIRE_SDA) == HIGH) && (digitalRead(PIN_WIRE_SDA) == HIGH);
+  pinMode(DISPLAY_PIN_SDA, INPUT);
+  pinMode(DISPLAY_PIN_SCL, INPUT);
+  return (digitalRead(DISPLAY_PIN_SDA) == HIGH) && (digitalRead(DISPLAY_PIN_SCL) == HIGH);
 }
 
 bool i2c_probe_device(byte address)
 {
   // Probe the specified address to see if a device seems to be present.
-  Wire.beginTransmission(address);
-  return (Wire.endTransmission() == 0);
+  DISPLAY_WIRE_DEVICE.beginTransmission(address);
+  return (DISPLAY_WIRE_DEVICE.endTransmission() == 0);
 }
 #endif
 
@@ -494,7 +601,7 @@ size_t DebugLogger::write(uint8_t c)
 //     display.display();
 //   }
 // #endif
-#if SERIAL_DEBUG
+#if defined(SERIAL_DEBUG)
   if (tud_cdc_connected())
   {
     result = Serial.write(c);
@@ -516,7 +623,7 @@ size_t DebugLogger::write(const uint8_t *buffer, size_t size)
 //   }
 // #endif
 
-#if SERIAL_DEBUG
+#if defined(SERIAL_DEBUG)
   if (tud_cdc_connected())
   {
     result = Serial.write(buffer, size);
@@ -537,7 +644,7 @@ bool DebugLogger::enabled()
 //     result = true;
 //   }
 // #endif
-#if SERIAL_DEBUG
+#if defined(SERIAL_DEBUG)
   if (tud_cdc_connected())
   {
     result = true;
@@ -564,36 +671,73 @@ void setup()
   // wait until device mounted
   while( !USBDevice.mounted() ) delay(1);
 
-#if SERIAL_DEBUG
+#if defined(SERIAL_DEBUG)
   Serial.begin(115200);
 
+#if 1
   // Wait for the serial port to be opened.
   // NOTE: this will block forever, which can be inconvenient if you're trying to use the device.
-  // while (!Serial);
-
+  while (!Serial) { delay(100); }
+#else
   // Add a short delay so I can get the console open before things start happening.
   delay(2000);
-
-  debugLogger.println(F("Opened serial port"));
 #endif
 
+  debugLogger.printf(("Opened serial port\n"));
+#endif
+  
   // disable the chip-select pins for both sensors (chip select is active-low)
-  pinMode (PIN_SENSOR_1_SELECT, OUTPUT);
-  digitalWrite(PIN_SENSOR_1_SELECT, HIGH);
-  pinMode (PIN_SENSOR_2_SELECT, OUTPUT);
-  digitalWrite(PIN_SENSOR_2_SELECT, HIGH);
+  // adns::init() now does this internally
+  // pinMode (PIN_SENSOR_1_SELECT, OUTPUT);
+  // digitalWrite(PIN_SENSOR_1_SELECT, HIGH);
+  // pinMode (PIN_SENSOR_2_SELECT, OUTPUT);
+  // digitalWrite(PIN_SENSOR_2_SELECT, HIGH);
+
 #if defined(DISPLAY_CS_PIN) 
   // also, disable chip-select for an SPI display if we're using one.
   pinMode (DISPLAY_CS_PIN, OUTPUT);
   digitalWrite(DISPLAY_CS_PIN, HIGH);
 #endif
 
-  SPI.begin();
-  debugLogger.println(F("Initializing sensor 1:"));
-  s1.init();
-  debugLogger.println(F("Initializing sensor 2:"));
-  s2.init();
-  
+  // initialize the SPI device(s) for the sensors
+  // adns::init() now calls begin() on the SPI device, so this is no longer necessary.
+// #if defined(SENSOR_1_SPI_DEVICE)
+//   debugLogger.println(F("Starting SENSOR_1_SPI_DEVICE"));
+//   SENSOR_1_SPI_DEVICE.begin();
+// #endif
+// #if defined(SENSOR_2_SPI_DEVICE)
+//   #if defined(SENSOR_1_SPI_DEVICE)
+//     // If both are defined, and they're the same device, don't begin it twice.
+//     if (&SENSOR_1_SPI_DEVICE != &SENSOR_2_SPI_DEVICE)
+//   #endif
+//   {
+//     debugLogger.println(F("Starting SENSOR_2_SPI_DEVICE"));
+//     SENSOR_2_SPI_DEVICE.begin();
+//   }
+// #endif
+
+  debugLogger.printf("Initializing sensor 1:\n");
+  bool s1_inited = s1.init();
+
+  debugLogger.printf("Initializing sensor 2:\n");
+  bool s2_inited = s2.init();
+
+  // Since converting to Adafruit_SPIDevice, sometimes the first init attempt fails, 
+  // for reasons I haven't yet figured out.
+  // Retrying after initing the other sensor sometimes seems to work, which makes no sense.
+  if (!s1_inited)
+  {
+    debugLogger.printf("Sensor 1 init failed, trying again:\n");
+    s1.init();
+  }
+
+  if (!s2_inited)
+  {
+    debugLogger.printf("Sensor 2 init failed, trying again:\n");
+    s2.init();
+  }
+
+
   for(int i=0; i<buttonCount; i++)
   {
       pinMode(buttonPins[i], INPUT_PULLUP);
@@ -602,28 +746,28 @@ void setup()
 #if defined(SENSOR_DISPLAY_I2C)
   if (!i2c_probe_bus())
   {
-    debugLogger.println(F("i2c bus appears disconnected"));
+    debugLogger.printf("i2c bus appears disconnected\n");
   }
   else
   {
-    debugLogger.println(F("i2c bus seems sane"));
-    Wire.begin();
+    debugLogger.printf("i2c bus seems sane\n");
+    DISPLAY_WIRE_DEVICE.begin();
     if (!i2c_probe_device(display_address))
     {
-      debugLogger.println(F("Display not found"));
+      debugLogger.printf("Display not found\n");
     }
     else
     {
-      debugLogger.println(F("Display found"));
+      debugLogger.printf("Display found\n");
       // Something responded at the correct address. Assume it's the display.
       if (!display.begin(display_address)) 
       {
-        debugLogger.println(F("Display init failed"));
+        debugLogger.printf("Display init failed\n");
       }
       else
       {
         display_ready = true;
-        debugLogger.println(F("Display initialized"));
+        debugLogger.printf("Display initialized\n");
 
         reset_display();
       }
@@ -651,39 +795,34 @@ void setup()
   pixel.show();
 #endif
 
-  debugLogger.println(F("Initialization complete."));
+  debugLogger.printf("Initialization complete.\n");
 
-#if SENSOR_DISPLAY && SENSOR_DISPLAY_ON_STARTUP
+#if defined(SENSOR_DISPLAY) && defined(SENSOR_DISPLAY_ON_STARTUP)
   set_sensor_display(true);
 #endif
 }
 
-// Leaving the piezo pin in OUTPUT mode seems to cause a faint, constant noise from the piezo speaker.
-// Only put it in OUTPUT mode when playing clicks.
-static bool clicking = false;
 void click()
 {
 #ifdef PIN_PIEZO
   pinMode(PIN_PIEZO, OUTPUT);
   // This is MUCH louder than just toggling the high/low once with digitalWrite().
-  tone(PIN_PIEZO, 1500);
-  clicking = true;
+  tone(PIN_PIEZO, 1500, 5);
 #endif
 }
 
-void quiet()
+void printBurst(adns &sensor)
 {
-#ifdef PIN_PIEZO
-  if (clicking)
-  {
-    clicking = false;
-    // Stop the tone (if playing) and take the pin out of OUTPUT mode.
-    noTone(PIN_PIEZO);
-    pinMode(PIN_PIEZO, INPUT);
-  }
-#endif
+    debugLogger.printf("Motion = 0x%02x, ", int(sensor.Motion));
+    debugLogger.printf("Observation = 0x%02x, ", int(sensor.Observation));
+    debugLogger.printf("SQUAL = 0x%02x, ", int(sensor.SQUAL));
+    debugLogger.printf("Pixel_Sum = 0x%02x, ", int(sensor.Pixel_Sum));
+    debugLogger.printf("min/max Pixel = 0x%02x/0x%02x, ", int(sensor.Minimum_Pixel), int(sensor.Maximum_Pixel));
+    debugLogger.printf("Shutter = %d, ", sensor.Shutter);
+    debugLogger.printf("Frame_period = %d, ", sensor.Frame_Period);
+    debugLogger.printf("x/y = %d/%d", sensor.x, sensor.y);
+    debugLogger.println("");
 }
-
 void loop() 
 {
   unsigned long loop_start_time = micros();
@@ -709,21 +848,32 @@ void loop()
     Vector v1 = s1.motion();
     Vector v2 = s2.motion();
 
+#if 0
+    // Print all values from the burst.
+    // Possibly useful for tweaking sensor parameters.
+    debugLogger.printf("s1: ");
+    printBurst(s1);
+    debugLogger.printf("s2: ");
+    printBurst(s2);
+#endif
+
+#if 0
     // Useful when debugging sensor scaling
-    // debugLogger.print(F("report_cpi = "));
-    // debugLogger.print(s1.report_cpi);
-    // debugLogger.print(F(", current_cpi = "));
-    // debugLogger.print(s1.current_cpi);
-    // debugLogger.print(F(", cpi_scale_factor = "));
-    // debugLogger.print(s1.cpi_scale_factor);
-    // debugLogger.print(F(", x = "));
-    // debugLogger.print(s1.x);
-    // debugLogger.print(F(", y = "));
-    // debugLogger.print(s1.y);
-    // debugLogger.print(F(", v = "));
-    // debugLogger.print(v1);
-    // debugLogger.println("");
-    
+    debugLogger.print(F("report_cpi = "));
+    debugLogger.print(s1.report_cpi);
+    debugLogger.print(F(", current_cpi = "));
+    debugLogger.print(s1.current_cpi);
+    debugLogger.print(F(", cpi_scale_factor = "));
+    debugLogger.print(s1.cpi_scale_factor);
+    debugLogger.print(F(", x = "));
+    debugLogger.print(s1.x);
+    debugLogger.print(F(", y = "));
+    debugLogger.print(s1.y);
+    debugLogger.print(F(", v = "));
+    debugLogger.print(v1);
+    debugLogger.println("");
+#endif
+
     // Given the way my design mounts the sensors (with the wire attachment at the top), the 9800 is inverted relative to the others.
     if (s1.sensor_type() == adns::PID_adns9800)
     {
@@ -828,9 +978,26 @@ void loop()
     {
       // Check for the toggle condition
       static char prevButtons = 0;
-      if (buttons == 0x07 && prevButtons != 0x07)
+      if (prevButtons == 0x07 && buttons != 0x07)
       {
+        // All 3 buttons were pressed
         set_sensor_display(!sensor_display_mode);
+      }
+      else if (sensor_display_mode)
+      {
+          // If we're in sensor display mode, the main button toggles zoom focus
+          if (prevButtons == 0x01 && buttons == 0x00)
+          {
+            sensor_display_zoom_select = !sensor_display_zoom_select;
+            // Erase the sensor draw area
+            const int max_sensor_draw_size = ((36 * 2) + 2);
+            display.fillRect(
+              0, 
+              display.height() - max_sensor_draw_size,
+              display.width(),
+              max_sensor_draw_size,
+              text_bg);
+          }
       }
       prevButtons = buttons;
     }
@@ -952,8 +1119,6 @@ void loop()
   {
     delayMicroseconds(report_microseconds - loop_time);
   }
-
-  quiet();
 }
 
 
