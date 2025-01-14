@@ -309,6 +309,33 @@ module sensor_screw_hole()
     cylinder(d=5, h=100, $fn=16);
 }
 
+module pmw3360_board()
+{
+    z = sensor_board_thickness + sensor_board_clearance;
+    if (false)
+    {
+        // The board itself (original)
+        color("green", 0.5) ccube(pmw3360_board_width, pmw3360_board_height, z);
+    } else {
+        // Outline of the custom sensor board
+        // a polygon with the shape of the new board
+        x = pmw3360_board_width / 2;
+        y = pmw3360_board_height / 2;
+        color("green", 0.5)                     
+        linear_extrude(height = z, center = false)
+        polygon([
+            [-x, -y],
+            [-x, y],
+            [x, y],
+            [x, -y],
+            [7, -y],
+            [5.5, -(y + 2)],
+            [-5.5, -(y + 2)],
+            [-7, -y],
+        ]);
+    }
+}
+
 module sensor_cutout(params)
 {
     if (params[2] == sensor_type_adns9800)
@@ -419,8 +446,7 @@ module sensor_cutout(params)
                 z = sensor_board_thickness + sensor_board_clearance;
                 translate([0,0,-(lens_thickness + z)])
                 {
-                    // The board itself
-                    color("green", 0.5) ccube(pmw3360_board_width, pmw3360_board_height, z);
+                    pmw3360_board();
 
                     hull()
                     {
@@ -490,7 +516,8 @@ module sensor_access_base(params)
             translate([pmw3360_board_offset, 0, 0])
             {
                 // The board itself
-                color("green", 0.5) ccube(pmw3360_board_width, pmw3360_board_height, z);
+                pmw3360_board();
+                // color("green", 0.5) ccube(pmw3360_board_width, pmw3360_board_height, z);
                 
                 hull()
                 {
