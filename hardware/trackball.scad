@@ -44,6 +44,16 @@ sensor_params = [
 // With the pmw3360 and one of the purpose-made balls (Kensington/Perixx), it seems to work fine to have a skew angle of 0.
 sensor_skew_angle=0;
 
+
+////////////////////
+// True to have a cutout on the left side for cabling/access to the breadboard.
+// This isn't needed with the new custom board, as the cable can exit to the front.
+side_breadboard_cutout=false;
+
+////////////////////
+// If using the custom board, breadboard tabs aren't useful.
+breadboard_tabs=false;
+
 ////////////////////
 // This sets the number and location of the cutouts/supports for buttons.
 // Button params are:
@@ -645,21 +655,26 @@ module breadboard_cutout()
 
         }
 
-        // connection tabs
-        translate([0, breadboard_size[1] / 2, 0])
-        breadboard_tab();
-        translate([0, -breadboard_size[1] / 2, 0])
-        breadboard_tab();
-        translate([breadboard_size[0] / 2, 0, 0])
-        breadboard_tab();
-        translate([-breadboard_size[0] / 2, 0, 0])
-        breadboard_tab();
+        if (breadboard_tabs)
+        {
+            // connection tabs
+            translate([0, breadboard_size[1] / 2, 0])
+            breadboard_tab();
+            translate([0, -breadboard_size[1] / 2, 0])
+            breadboard_tab();
+            translate([breadboard_size[0] / 2, 0, 0])
+            breadboard_tab();
+            translate([-breadboard_size[0] / 2, 0, 0])
+            breadboard_tab();
+        }
 
-        // USB Cable clearance
-        translate([0, 0, 4])
-        rotate([0, -100, 0])
-        cylinder(d=breadboard_size[1], h=50);
-
+        if (side_breadboard_cutout)
+        {
+            // USB Cable clearance
+            translate([0, 0, 4])
+            rotate([0, -100, 0])
+            cylinder(d=breadboard_size[1], h=50);
+        }
     }
 }
 
