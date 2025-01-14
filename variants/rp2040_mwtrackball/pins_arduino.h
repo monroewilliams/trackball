@@ -15,17 +15,14 @@
 #define PIN_SERIAL2_RX (31u)
 
 // SPI
-// NOTE: In the first board run, I incorrectly routed PIN_SPI0_MOSI to a pin that doesn't actually support
-// that assignment for hardware SPI. The second run will have this fixed.
 #define PIN_SPI0_MISO  (4u)
-#define PIN_SPI0_MOSI  (5u)
+#define PIN_SPI0_MOSI  (7u)
 #define PIN_SPI0_SCK   (2u)
 // No SS pin specified to the library, code will set it manually.
-// Pins routed to the connectors are GPIO6 and GPIO7 
-// NOTE: in the first run, the second SPI connector is mislabeled as SPI0.8, it should be SPI0.7
+// Pins routed to the connectors are GPIO8 and GPIO9 
 #define PIN_SPI0_SS    (31u)
-#define PIN_SPI0_SS06  (6u)
-#define PIN_SPI0_SS07  (7u)
+#define PIN_SPI0_SS08  (8u)
+#define PIN_SPI0_SS09  (9u)
 
 #define PIN_SPI1_MISO  (12u)
 #define PIN_SPI1_MOSI  (15u)
@@ -44,12 +41,12 @@
 #define PIN_PIEZO (24u)
 
 // Button connectors
+#define PIN_B16       (16u)
+#define PIN_B17       (17u)
 #define PIN_B18       (18u)
 #define PIN_B19       (19u)
 #define PIN_B20       (20u)
 #define PIN_B21       (21u)
-#define PIN_B22       (22u)
-#define PIN_B23       (23u)
 
 // pins routed to the breakout connector
 #define PIN_BREAKOUT1 (26u)
@@ -59,7 +56,7 @@
 
 // parameters for the common header and library code
 #define SERIAL_HOWMANY (0u)
-#define SPI_HOWMANY    (1u)
+#define SPI_HOWMANY    (2u)
 #define WIRE_HOWMANY   (1u)
 
 // Include variants/generic/common.h from framework-arduinopico 

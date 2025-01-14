@@ -120,42 +120,31 @@ const int report_Hz = 120;
   // PIN_PIEZO is already defined in the variant's pins_arduino.h
 
    // Mouse button inputs
-  #define PIN_BUTTON_LEFT PIN_B18 
-  #define PIN_BUTTON_RIGHT PIN_B19 
-  #define PIN_BUTTON_MIDDLE PIN_B20 
-
-// for software SPI:
-// #define PIN_SPI0_MISO  (4u)
-// #define PIN_SPI0_MOSI  (5u)
-// #define PIN_SPI0_SCK   (2u)
-
+  #define PIN_BUTTON_LEFT PIN_B16 
+  #define PIN_BUTTON_RIGHT PIN_B17 
+  #define PIN_BUTTON_MIDDLE PIN_B18 
 
   // SPI Select pins for sensors
 
   // sensor 1
-#if 0
-  // software SPI
-  #define PIN_SENSOR_1_SELECT (6u)  
-  #define SENSOR_1_SOFTWARE_SPI     (2u), (4u), (5u)
-#else
-  // hardware SPI on SPI1.13 connector
-  #define PIN_SENSOR_1_SELECT PIN_SPI1_SS
-  #define SENSOR_1_SPI_DEVICE SPI1
-#endif
+  // hardware SPI on SPI0.8 connector
+  #define PIN_SENSOR_1_SELECT PIN_SPI0_SS08
+  #define SENSOR_1_SPI_DEVICE SPI
 
   // sensor 2
-#if 0
-  // software SPI on SPI0.8 connector (which actually uses gpio7 as its CS)
-  #define PIN_SENSOR_2_SELECT (7u)  
-  #define SENSOR_2_SOFTWARE_SPI     (2u), (4u), (5u)
-
-  // software SPI on the breakout connector
-  // #define PIN_SENSOR_2_SELECT (26u)  
-  // #define SENSOR_2_SOFTWARE_SPI     (29u), (28u), (27u)
+#if 1
+  // hardware SPI on SPI0.9 connector
+  #define PIN_SENSOR_2_SELECT PIN_SPI0_SS09
+  #define SENSOR_2_SPI_DEVICE SPI
+#elif 0
+  // hardware SPI on SPI1.13 connector
+  #define PIN_SENSOR_2_SELECT PIN_SPI1_SS
+  #define SENSOR_2_SPI_DEVICE SPI1
 #else
-  // If we don't define PIN_SENSOR_2_SELECT, s2 is initialized as a no-op dummy sensor.
-  // hardware SPI (not actually connected)
-  // #define PIN_SENSOR_2_SELECT (7u)
+  // software SPI on breakout connector
+  #define PIN_SENSOR_2_SELECT PIN_BREAKOUT1
+    // define these as sck, miso, mosi
+  #define SENSOR_2_SOFTWARE_SPI   PIN_BREAKOUT4, PIN_BREAKOUT3, PIN_BREAKOUT2
 #endif
 
   // Defs for the Wire interface for the display
@@ -804,10 +793,18 @@ void setup()
 
 void click()
 {
+#if !defined(PIEZO_FREQUENCY)
+  #define PIEZO_FREQUENCY 1500
+#endif
+
+#if !defined(PIEZO_DURATION)
+  #define PIEZO_DURATION 5
+#endif
+
 #ifdef PIN_PIEZO
   pinMode(PIN_PIEZO, OUTPUT);
   // This is MUCH louder than just toggling the high/low once with digitalWrite().
-  tone(PIN_PIEZO, 1500, 5);
+  tone(PIN_PIEZO, PIEZO_FREQUENCY, PIEZO_DURATION);
 #endif
 }
 
@@ -1112,7 +1109,7 @@ void loop()
 
   }
 #endif
-
+  
   // Delay to keep the loop time right around report_microseconds
   loop_time = micros() - loop_start_time;
   if (loop_time < report_microseconds)
