@@ -46,6 +46,11 @@ sensor_skew_angle=0;
 
 
 ////////////////////
+// My custom designed pmw3360 boards need a little more clearance on the plug side.
+// This should be harmless if using the boards from Tindie, but this lets you disable it
+custom_pmw3360_clearance=true;
+
+////////////////////
 // True to have a cutout on the left side for cabling/access to the breadboard.
 // This isn't needed with the new custom board, as the cable can exit to the front.
 side_breadboard_cutout=false;
@@ -322,11 +327,8 @@ module sensor_screw_hole()
 module pmw3360_board()
 {
     z = sensor_board_thickness + sensor_board_clearance;
-    if (false)
+    if (custom_pmw3360_clearance)
     {
-        // The board itself (original)
-        color("green", 0.5) ccube(pmw3360_board_width, pmw3360_board_height, z);
-    } else {
         // Outline of the custom sensor board
         // a polygon with the shape of the new board
         x = pmw3360_board_width / 2;
@@ -343,6 +345,9 @@ module pmw3360_board()
             [-5.5, -(y + 2)],
             [-7, -y],
         ]);
+    } else {
+        // The board itself (original)
+        color("green", 0.5) ccube(pmw3360_board_width, pmw3360_board_height, z);
     }
 }
 
