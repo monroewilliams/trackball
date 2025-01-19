@@ -1,10 +1,14 @@
 # Assembly #
 
-This document assumes you are comfortable with 3D printing OpenSCAD models, soldering, and assembling electronics.<br>
+This document assumes you are comfortable with 3D printing OpenSCAD models, soldering, and assembling electronics.
+
+There are a number of pre-rendered STL files in the [stl directory](../stl). If those suit your needs, you can skip the whole OpenSCAD step here and drop them into your favorite slicer.
 
 Set up the model in `trackball.scad` by setting `ball_diameter` to the diameter of the ball you want to use, and the entries in `sensor_params` to the type of sensor you're using. (You can also tweak the location/number of button cutouts by modifying the contents of `button_params`, although getting a layout that works can take some tweaking. I would advise trying out the default setup first.)
 
-Once you're happy with the setup, render it to an STL file with OpenSCAD, open it in your favorite slicer (I use Cura, but any capable slicer will do), slice it, and print it out. <br>
+NOTE: The trackball model is relatively complex, and older versions of OpenSCAD can take a long time (minutes) to render it. If you're doing any work with the model itself, I highly recommend getting a version of OpenSCAD that has the new [Manifold backend](https://www.reddit.com/r/openscad/comments/11usd6v/manifold_backend_is_just_merged/), enabling that, disabling "Automatic Reload and Preview" in the "Design" menu, and just using "Render" in place of "Preview". The Manifold backend is several orders of magnitude faster (yes, really!), and is much, much faster than the preview renderer for this model; with Manifold enabled, the model renders in milliseconds.
+
+Once you're happy with the setup, render it to an STL file with OpenSCAD, open it in your favorite slicer (I use Cura, but any capable slicer will do), slice it, and print it out.
 
 <img src="../pictures/model-1.png">
 <img src="../pictures/model-2.png">

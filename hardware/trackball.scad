@@ -53,11 +53,11 @@ custom_pmw3360_clearance=true;
 ////////////////////
 // True to have a cutout on the left side for cabling/access to the breadboard.
 // This isn't needed with the new custom board, as the cable can exit to the front.
-side_breadboard_cutout=false;
+side_breadboard_cutout=true;
 
 ////////////////////
 // If using the custom board, breadboard tabs aren't useful.
-breadboard_tabs=false;
+breadboard_tabs=true;
 
 ////////////////////
 // This sets the number and location of the cutouts/supports for buttons.
@@ -688,7 +688,7 @@ module breadboard_clearance()
 
 }
 
-module body_left_cut()
+module body_left_cut(inner_fillet = 20, outer_fillet = 0)
 {
     union()
     {
@@ -712,9 +712,9 @@ module body_left_cut()
                 {
                     // fillet
                     fillet_amount = 20;
-                    // Added $fn=128 to make the left cut high-res
-                    offset(-fillet_amount, $fn=128) 
-                    offset(fillet_amount)
+                    offset(outer_fillet)
+                    offset(-(inner_fillet + outer_fillet))
+                    offset(inner_fillet)
                     translate([radius, ledge_height])
                     rotate([0, 0, -downward_curve])
                     translate([-radius, -ledge_height])
@@ -743,7 +743,7 @@ module body_left_cut()
                 }
                 // Clip to positive X
                 translate([0, -150])
-                square(300, 300);
+                square([300, 300]);
             }
         }  
         // Don't cut anything aft of tail_y_boundary with this shape.
@@ -764,7 +764,7 @@ module body_right_front_cut()
 
         // Clip to positive X
         translate([0, 0])
-        square(300, 300);
+        square([300, 300]);
     }
 }
 
@@ -807,7 +807,7 @@ module body_right_rear_cut(params)
 
             // Clip to positive X
             translate([0, -150])
-            square(300, 300);
+            square([300, 300]);
         }
         
         // Don't clip forward of this part
@@ -881,10 +881,10 @@ module body_button_supports()
             rcube(20, 20, 10, 3);
         }
     }
-
 }
 
-module body()
+
+module body(include_button_supports = true, include_sensor_shells = true)
 {
     intersection()
     {
@@ -892,11 +892,11 @@ module body()
         translate ([0, 0, bottom])
         ccube(400, 400, 400);
 
-        body_unclipped();
+        body_unclipped(include_button_supports, include_sensor_shells);
     }
 
 }
-module body_unclipped(include_button_supports = true)
+module body_unclipped(include_button_supports = true, include_sensor_shells = true)
 {
     difference()
     {
@@ -916,7 +916,10 @@ module body_unclipped(include_button_supports = true)
                 body_button_supports();
             }
 
-            sensor_shells();
+            if (include_sensor_shells)
+            {
+                sensor_shells();
+            }
         }
 
         // Trim the front of the body so it's not pointy for no reason

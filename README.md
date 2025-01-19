@@ -4,6 +4,10 @@ This is the code to run a trackball I'm building for myself.<br>
 
 It's currently based around either a [Seeeduino XIAO](https://wiki.seeedstudio.com/Seeeduino-XIAO/) or the very similar [Adafruit QT Py](https://www.adafruit.com/product/4600), and a couple of optical mouse sensor breakout boards. I've built two so far, one using [these ADNS-9800 boards](https://www.tindie.com/products/jkicklighter/adns-9800-optical-laser-sensor/), and one using [these PMW3360 breakout boards](https://www.tindie.com/products/jkicklighter/pmw3360-motion-sensor/).<br>
 
+Update January 2025: As an alternative to off-the-shelf microcontrollers and sensor boards, I've created a custom main board and sensor breakouts that can be ordered from a PCB creation/assembly service (I've been using [JLCPCB](https://jlcpcb.com)). The KiCad files and the files need to order them from JLCPCB are in their own repositories on github. 
+
+[Details on the custom boards are here.](hardware/Custom.md)
+
 <img src="pictures/both-finished.jpeg"><br>
 
 I started this project because my favorite ergonomic trackball, the Trackman Marble FX, is basically no longer viable. I really like the shape of it, but it's PS/2 only, has a number of issues with tracking and durability, and has become really hard to find/expensive. I have a small collection of them, most of which have broken over the years.<br>
