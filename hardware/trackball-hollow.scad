@@ -80,7 +80,19 @@ module full_hollow()
             linear_extrude(height = 25)
             wire_cutout_profile();
         }
+        
+        // A little extra clearance for the main board
+        translate([0, 0, bottom])
+        translate([breadboard_offset[0] + 3, breadboard_offset[1], 0])
+        hull()
+        {
+            ccube(breadboard_size[0], breadboard_size[1], 4);
+            
+            cylinder(h = 20, d = 2);
+        }
+        
     }
+
 }
 
 module body_shell_cut()
