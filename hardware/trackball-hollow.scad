@@ -53,6 +53,21 @@ module full_hollow()
                 }
                 // something for the sensors to attach to
                 sensor_supports();
+
+                // Backing for each of the three support bearings
+                for(i = bearing_spacing )
+                {
+                    rotate(i) 
+                    rotate([bearing_angle, 0, 0])
+                    translate([0, 0, -(ball_radius + (bearing_diameter/2))]) 
+                    scale([1, 1, 0.75])
+                    sphere(r=5, $fn=50);
+                }
+
+                // Fix up a spot next to the main button that's got a small unsupported overhang
+                button_transform(button_params[0])
+                translate([16.5, 0.5, 1])
+                sphere(d = 25);
             }
         }
         
@@ -90,7 +105,7 @@ module body_shell_cut()
                 {
                     // left cut
                     translate([1.5, 0, -2]) // body_shell_cut tweak
-                    body_left_cut(20, 20);
+                    body_left_cut(15, 25);
                             
                     // right cut
                     body_right_cut();
