@@ -49,7 +49,7 @@ module full_hollow()
                 for(i = stud_locations)
                 {
                     translate([i[0], i[1], bottom])
-                    cylinder(h = 50, r = 5.5, $fn=32);
+                    cylinder(h = 50, r = 5.5);
                 }
                 // something for the sensors to attach to
                 sensor_supports();
@@ -61,24 +61,41 @@ module full_hollow()
                     rotate([bearing_angle, 0, 0])
                     translate([0, 0, -(ball_radius + (bearing_diameter/2))]) 
                     scale([1, 1, 0.75])
-                    sphere(r=5, $fn=50);
+                    sphere(r=5);
                 }
 
                 // Fix up a spot next to the main button that's got a small unsupported overhang
                 button_transform(button_params[0])
                 translate([16.5, 0.5, 1])
                 sphere(d = 25);
+
+                // Fill in a bit around the USB port
+                translate([0, 0, bottom])
+                {
+                    hull()
+                    {
+                        rotate([0, 0, 180 + 45])
+                        translate([0, -42, 0])
+                        {
+                            cuboid([16, 17.75, 8]);
+//                            translate([0, 0, 4])
+//                            rotate([90, 0, 0])
+//                            cylinder(d = 4, h = 15.75, anchor = CENTER);
+                        }
+                    }
+                }
             }
         }
         
-        // Cable outlet at the front (this was part of wire_cutouts, which we've disabled here.)
+        // Front outlet that will fit either a fixed cable or a small USB-C breakout board like this one:
+        // https://www.amazon.com/Teansic-Connector-Breakout-Converter-Transfer/dp/B0B4J5NJ2Y
+        // Insert the board into the rectangular cutout PCB-side-up, and the bottom plate will rest against the
+        // USB-C connector and hold it in place.
         translate([0, 0, bottom])
         {
-            rotate([90, 0, 230])
-            translate([-22, 0, 35])
-            rotate([0, 15, 0])
-            linear_extrude(height = 25)
-            wire_cutout_profile();
+            rotate([0, 0, 180 + 45])
+            translate([0, -42, 0])
+            usb_port_cut();
         }
         
         // A little extra clearance for the main board
@@ -95,12 +112,50 @@ module full_hollow()
 
 }
 
+module usb_port_cut()
+{
+    board_width = 12;
+    board_length = 13.75;
+    board_height = 4.25;
+    
+    // Cavity just the size of the board
+    hull()
+    {
+        cuboid([board_width, board_length, board_height], anchor = BOTTOM);
+        translate([0, 0, 4])
+        rotate([90, 0, 0])
+        cylinder(d = 3, h = board_length, anchor = CENTER);
+    }
+    
+    hull()
+    {
+        // hole out the front just the size of the USB plug,
+        cuboid([9, 2 + board_length/2, 3], anchor = BOTTOM+BACK,
+        rounding = 1.5, edges = [TOP+LEFT, TOP+RIGHT]);
+        // with some extra room, if we're using this for a cable instead
+        translate([0, 0, 4])
+        rotate([90, 0, 0])
+        cylinder(d = 3, h = 2 + board_length/2, anchor = BOTTOM);
+        
+    }
+    
+    // Hole out the back for the soldered wires
+    hull()
+    {
+        cuboid([board_width - 4, 3 + board_length/2, board_height], anchor = BOTTOM+FRONT);
+        translate([0, board_length/2, 4])
+        rotate([-90, 0, 0])
+        cylinder(d = 4, h = 3 , anchor = BOTTOM);
+    }
+}
+
+
 module body_shell_cut()
 {
     // This started out as simply:
 //    minkowski_difference() {
-//        body_unclipped(false, false, $fa=10);
-//        sphere(r=3, $fn=16);
+//        body_unclipped(false, false);
+//        sphere(r=3);
 //    }
 
     // This modifies that by replicating parts of body_unclipped, 
@@ -111,6 +166,7 @@ module body_shell_cut()
     {
         difference()
         {
+            // The $fa here seriously reduces the complexity of the minkowski
             union($fa=10)
             {
                 intersection()
@@ -130,7 +186,11 @@ module body_shell_cut()
             translate([0, -6, 0]) // body_shell_cut tweak: a bit more support under the front edge
             ccube(100, 100, 200);
         }
-        sphere(r=3, $fn=16);
+
+        // Keeping this shape as simple as possible also helps minkowski complexity
+//        sphere(r=3, $fn=16);
+        spheroid(r=3, style = "octa", $fn=12);
+//        cuboid(3);
     }    
 }
 

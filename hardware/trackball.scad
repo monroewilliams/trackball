@@ -44,6 +44,8 @@ sensor_params = [
 // With the pmw3360 and one of the purpose-made balls (Kensington/Perixx), it seems to work fine to have a skew angle of 0.
 sensor_skew_angle=0;
 
+// Should the attachment points have voids for screws?
+bottom_screws = true;
 
 ////////////////////
 // My custom designed pmw3360 boards need a little more clearance on the plug side.
@@ -160,7 +162,7 @@ module rrect(x, y, r)
 {
     translate([-x/2, -y/2, 0])
     translate([r, r, 0])
-    offset(r, $fs = 1)
+    offset(r)
     square([x - (r * 2), y - (r * 2)]);
 }
 
@@ -234,13 +236,38 @@ module bearing_cutouts()
             rotate(i)
             rotate([bearing_angle - 180, 0, 0])
             {
-                // Bearing hole consists of a hemisphere and a straight cylinder.
-                cylinder (h=ball_radius + (bearing_diameter/2), d=bearing_diameter, $fn=16);
-                translate ([0,0,ball_radius + (bearing_diameter/2)])
-                    sphere (d=bearing_diameter, $fn=16);
+                new_bearing_holes = true;
+
+                // Orginal bearing hole consists of a hemisphere and a straight cylinder.
+                hull() 
+                {
+                    translate ([0,0,ball_radius + (bearing_diameter/2)])
+                        sphere (d=bearing_diameter);
+                    if (!new_bearing_holes)
+                    {
+                        // new bearing hole leaves the slight overhang, but makes cuts around it below.
+                        translate ([0,0,ball_radius - (bearing_diameter/2)])
+                        cylinder (h=bearing_diameter, d=bearing_diameter);
+                    }
+                }
+
+                if (new_bearing_holes)
+                {
+                    // relief around the bearing hole - testing a different idea
+                    cut_angle = 60;
+                    translate([0,0,ball_radius + (bearing_diameter)])
+                    for (i = [0, 120, 240])
+                    rotate([0, 0, i + 90 - (cut_angle/2)])
+                    rotate_extrude(cut_angle)
+                    polygon([
+                        [0, 0],
+                        [0, -bearing_diameter],
+                        [-bearing_diameter, -bearing_diameter]
+                    ]);
+                }
 
                 // through-hole to push out the bearing
-                cylinder (h=ball_radius + bearing_diameter + 100, d=2.5, $fn=16);
+                cylinder (h=ball_radius + bearing_diameter + 100, d=2);
             }
         }
     }
@@ -321,7 +348,7 @@ module sensor_screw_hole()
     // screwdriver access
     translate([0, 0,-104])
     color("white", 0.5)
-    cylinder(d=5, h=100, $fn=16);
+    cylinder(d=5, h=100);
 }
 
 module pmw3360_board()
@@ -377,7 +404,7 @@ module sensor_cutout(params)
             {
                 ccube(22,adns9800_board_radius, -(lens_thickness + 1));
                 translate([0, 0, -(lens_thickness + 2)])
-                cylinder(d=adns9800_board_radius, h=lens_thickness + 3, $fa=5);
+                cylinder(d=adns9800_board_radius, h=lens_thickness + 3);
             }
         
             // the board is a 32mm circle, ~2mm thick.
@@ -386,16 +413,16 @@ module sensor_cutout(params)
             translate([0,0,-(lens_thickness + z)])
             {
                 // The board itself
-                color("green", 0.5) cylinder(d=adns9800_board_radius, h=z, $fa = 5);
+                color("green", 0.5) cylinder(d=adns9800_board_radius, h=z);
                 
                 // Hemisphere for clearance
                 difference()
                 {
                     color("white", 0.25)
-                    sphere(d=adns9800_board_radius, $fa = 5);
+                    sphere(d=adns9800_board_radius);
                     
                     translate([0,0,1])
-                    cylinder(d=adns9800_board_radius, h=17, $fa=5);
+                    cylinder(d=adns9800_board_radius, h=17);
                 }
             }
             
@@ -433,7 +460,7 @@ module sensor_cutout(params)
             {
                 rcube(22, 20, -(lens_thickness + 1), pmw3360_lens_radius);
                 // translate([0, 0, -(lens_thickness + 2)])
-                // cylinder(d=32, h=lens_thickness + 3, $fa=5);
+                // cylinder(d=32, h=lens_thickness + 3);
                 
             }
 
@@ -476,7 +503,7 @@ module sensor_cutout(params)
                         {
                             color("white", 0.25)
                             rotate([0, 90, 0])
-                            cylinder(center = true, d=pmw3360_board_height, h=pmw3360_board_width, $fa = 5);
+                            cylinder(center = true, d=pmw3360_board_height, h=pmw3360_board_width);
                             
                             translate([0,0,1])
                             ccube(pmw3360_board_width + 2, pmw3360_board_height + 2, 17);
@@ -508,15 +535,15 @@ module sensor_access_base(params)
         translate([0,0,-(lens_thickness + z)])
         {
             // The board itself
-            cylinder(d=adns9800_board_radius, h=z, $fa = 5);
+            cylinder(d=adns9800_board_radius, h=z);
             
             // Hemisphere for clearance
             difference()
             {
-                sphere(d=adns9800_board_radius, $fa = 5);
+                sphere(d=adns9800_board_radius);
                 
                 translate([0,0,1])
-                cylinder(d=adns9800_board_radius, h=17, $fa=5);
+                cylinder(d=adns9800_board_radius, h=17);
             }
         }
     }
@@ -547,7 +574,7 @@ module sensor_access_base(params)
                     {
                         color("white", 0.25)
                         rotate([0, 90, 0])
-                        cylinder(center = true, d=pmw3360_board_height, h=pmw3360_board_width, $fa = 5);
+                        cylinder(center = true, d=pmw3360_board_height, h=pmw3360_board_width);
                         
                         translate([0,0,1])
                         ccube(pmw3360_board_width + 2, pmw3360_board_height + 2, 17);
@@ -569,7 +596,7 @@ module sensor_shell(params)
         z = sensor_board_thickness + sensor_board_clearance;
         translate([0,0,-(lens_thickness + z)])
         {
-            sphere(d=adns9800_board_radius + 4, $fa = 5);
+            sphere(d=adns9800_board_radius + 4);
         }
     }
     else if(params[2] == sensor_type_pmw3360)
@@ -589,7 +616,7 @@ module sensor_shell(params)
                     cylinder(d=4 + pmw3360_board_width, h=0.1);
 
                     rotate([0, 90, 0])
-                    cylinder(center = true, d=pmw3360_board_height + 4, h=pmw3360_board_width + 4, $fa = 5);
+                    cylinder(center = true, d=pmw3360_board_height + 4, h=pmw3360_board_width + 4);
                 }
             }
         }
@@ -634,7 +661,7 @@ module breadboard_tab()
     {
         ccube(5.0, 5.0, 6.5);
         translate([0, 0, 6.5])
-        sphere(d=4, $fn=16);
+        sphere(d=4);
     }
 }
 
@@ -935,7 +962,7 @@ stud_height = 2;
 module bottom_stud()
 {
     translate([0, 0, -0.01])
-    cylinder(d=stud_diameter, h = stud_height + 0.01, $fn=64);
+    cylinder(d=stud_diameter, h = stud_height + 0.01);
 }
 
 module bottom_stud_screw_hole()
@@ -943,16 +970,16 @@ module bottom_stud_screw_hole()
     // Add a hole that can be used for an M3x8 countersunk screw, for more permanent installs.
     translate([0, 0, 2])
     {
-        cylinder(d=3, h = 10, $fn=64);
+        cylinder(d=3, h = 10);
 
         mirror([0, 0, 1])
         {
             linear_extrude(height=2, scale=2)
-            circle(d=3, $fn=64);
+            circle(d=3);
 
             translate([0, 0, 2])
             linear_extrude(height=10)
-            circle(d=6, $fn=64);
+            circle(d=6);
         }
     }
 }
@@ -979,9 +1006,12 @@ module bottom_stud_hole()
         linear_extrude(height=stud_diameter / 2, scale=0)
         circle_outer(stud_diameter/2, hole_sides);
 
-        // Add a hole that can be used for an M3x8 countersunk screw, for more permanent installs.
-        // height is the screw depth minus the bottom thickness.
-        cylinder(d=3, h=6);
+        if (bottom_screws)
+        {
+            // Add a hole that can be used for an M3x8 countersunk screw, for more permanent installs.
+            // height is the screw depth minus the bottom thickness.
+            cylinder(d=3, h=6);
+        }
     }
 }
 
@@ -1250,7 +1280,9 @@ module button_cutouts()
 }
 
 // Set this to 4 for medium-res, 1 for high-res
+//$fa = 1;
 $fa = 1;
+$fs = 0.01;
 
 module full()
 {
@@ -1272,5 +1304,4 @@ module full()
     //    translate([0, 20, -10]) cube(center = true, [10, 20, 20]);
     }
 }
-
 
