@@ -30,6 +30,8 @@ https://www.adafruit.com/product/4600
 
 https://www.adafruit.com/product/4900
 
+- [My custom board](./Custom.md), which can be assembled for you by an assembly service like [JLCPCB](https://jlcpcb.com).
+
 ## Optical mouse sensors ##
 
 You will need two of these. I originally started this project with ADNS-9800 laser optical mouse sensor breakouts from here:
@@ -52,6 +54,8 @@ https://www.tindie.com/products/citizenjoe/pmw3360-motion-sensor/
 
 https://www.tindie.com/products/citizenjoe/pmw3389-motion-sensor/
 
+I also have a [custom-designed sensor board](./Custom.md) that pairs well with my custom main board, and can also be ordered from [JLCPCB](https://jlcpcb.com).
+
 ## Ball ##
 
 My original prototype used a regulation 2 1/4" (~57mm) billiard ball. The ADNS-9800 sensors I was using at the time really wanted some optical texture to be able to track the ball, and the best one I found was the cue ball from a pearlescent set I bought from eBay just for this project.
@@ -66,9 +70,11 @@ The Kensington Slimblade and Kensington Expert Mouse trackballs use this size, a
 
 https://www.amazon.com/gp/product/B07DXBMT6Z/
 
-and various sellers on AliExpress have similar 55mm replacement balls:
+and various sellers on Amazon and AliExpress have similar 55mm replacement balls:
 
-https://www.aliexpress.us/item/3256806116943772.html
+https://www.amazon.com/gp/product/B0CPDG8LX4
+
+https://www.aliexpress.us/item/3256806116943772.html (Careful with this one -- it's easy to order the 34mm ball by mistake.)
 
 ## USB Cable ##
 
@@ -87,20 +93,19 @@ https://www.amazon.com/Breadboard-Solderless-Prototype-Different-Raspberry/dp/B0
 ## Bearings ##
 
 You will need 3 ceramic ball bearings, diameter 1/8 inch (3.175mm), which press-fit into holes in the printed body. 
+For smooth operation, I recommend grade G5 or better (lower numbers are smoother, so G10 is worse than G5).
 They're cheap in packs of 25 or 50, and I recommend getting some extras because they're really easy to lose.
-I'm using these:
+Either of these will work fine:
 
 https://www.amazon.com/gp/product/B081SNH8J5/
-
-these should work equally well:
 
 https://www.amazon.com/gp/product/B07ZKPZK8Y/
 
 ## Buttons ##
 
-Three Subminiature microswitches, OMRON D2FC-F-7N or equivalent:
+Three Subminiature microswitches, OMRON D2FC-F-7N or equivalent (most of the ones sold as "mouse switches" are an idential form factor, approximately 12.8x5.8x6.5mm, and should fit in the carriers):
 
-https://www.amazon.com/D2FC-F-7N-Micro-Switch-Microswitch-Switches/dp/B085LB7FZY/
+https://www.amazon.com/D2F-01F-Switch-Microswitch-Subminiature-Logitech/dp/B0062WNDLI
 
 ## Piezo speaker ##
 
@@ -118,8 +123,8 @@ https://www.amazon.com/gp/product/B01MR1A4NV/
 
 Hookup wires, solder, etc. for wiring up the sensors and switches. I used some old ribbon cable for the sensor wiring to keep things tidy. I find that soldering the wires to break-apart male header pins makes for solid plug-in attachement to the breadboard.
 
-Optional: Thin adhesive-backed rubber to make non-skid feet for the bottom of the trackball.  I used some leftover sticky-backed rubber from a sheet of rubber feet, but something like this ought to work well:
+Optional: Thin adhesive-backed rubber to make non-skid feet for the bottom of the trackball.  I initially used some leftover sticky-backed rubber from a sheet of rubber feet, and later found this stuff, which works much better:
 
-https://www.amazon.com/Adhesive-Resistant-Silicone-Material-Protection/dp/B07GL9MHW7/
+https://www.amazon.com/gp/product/B0D41RLHJZ
 
 

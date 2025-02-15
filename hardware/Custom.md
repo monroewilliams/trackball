@@ -16,7 +16,7 @@ It's derived from [jfedor2](https://github.com/jfedor2)'s [PMW3360 breakout boar
 
 As with his project, there are no level shifters on this board, so it must be used with 3.3v logic. 
 
-The assembly service doesn't seem to be able to place the actual sensor, so I source those separately and hand-solder them (they're through-hole at around 1.75mm pitch, so not too difficult). It's easy to find PMW3360 and PMW3389 sensors on AliExpress. They can be had for under $10USD each, just make sure you order ones that have the "LM19-LSI" lens included, like [this one](https://www.aliexpress.us/item/3256807282468640.html).
+The assembly service doesn't seem to be able to place the actual sensor, so I source those separately and hand-solder them (they're through-hole at around 1.75mm pitch, so not too difficult). The board works equally well with PMW3360 and PMW3389 sensors (the pinouts are compatible). Both sensors can be found on AliExpress for under $10USD each, just make sure you order ones that have the "LM19-LSI" lens included, like [this one](https://www.aliexpress.us/item/3256807282468640.html).
 
 ## Main board ##
 
