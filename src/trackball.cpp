@@ -45,6 +45,9 @@ const int report_Hz = 120;
 // Only used if SENSOR_DISPLAY is non-zero
 // #define SENSOR_DISPLAY_ON_STARTUP
 
+// Turn this on to make the LED light up when buttons are pressed, and fade when they're released.
+// #define BUTTON_LIGHTS
+
 ///////////////////////////////////////
 
 #if SENSOR_DISPLAY == 1
@@ -642,6 +645,10 @@ bool DebugLogger::enabled()
   return result;
 }
 
+float ledRed = 0;
+float ledGreen = 0;
+float ledBlue = 0;
+
 void setup() 
 {
   // pinMode(LED_BUILTIN, OUTPUT);
@@ -779,8 +786,8 @@ void setup()
 
   pixel.begin();  // initialize the pixel
 
-  // and light it up
-  pixel.setPixelColor(0, 2, 0, 4);
+  // and set its color
+  pixel.setPixelColor(0, 0, 0, 0);
   pixel.show();
 #endif
 
@@ -948,6 +955,16 @@ void loop()
       int name = buttonNames[i];
       if (digitalRead(buttonPins[i]) == LOW)
       {
+#if defined(BUTTON_LIGHTS)
+        // For the first three buttons, set a color whenever the button is down
+        switch(i)
+        {
+          case 0: ledRed = 1.0; break;
+          case 1: ledGreen = 1.0; break;
+          case 2: ledBlue = 1.0; break;
+          default: break;
+        }
+#endif
         if (!(buttons & name))
         {
           // debugLogger.print(F("pressing mouse button "));
@@ -1109,7 +1126,26 @@ void loop()
 
   }
 #endif
+
+#if defined(BUTTON_LIGHTS)
+  // Update the lighting
+  pixel.setPixelColor(0, ledRed * 0xFF, ledGreen * 0xFF, ledBlue * 0xFF);
+  pixel.show();
+
+  // Fade in approximately half a second
+  static float fadeVal = 1.0 / (report_Hz / 2);
   
+  ledRed -= fadeVal;
+  if (ledRed < 0)
+    ledRed = 0; 
+  ledGreen -= fadeVal;
+  if (ledGreen < 0)
+    ledGreen = 0; 
+  ledBlue -= fadeVal;
+  if (ledBlue < 0)
+    ledBlue = 0; 
+#endif
+
   // Delay to keep the loop time right around report_microseconds
   loop_time = micros() - loop_start_time;
   if (loop_time < report_microseconds)
