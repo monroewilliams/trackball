@@ -15,7 +15,7 @@ include <trackball.scad>
 
 //full_hollow();
 
-module full_hollow()
+module full_hollow(usb_plug = false)
 {
     difference()
     {
@@ -69,33 +69,51 @@ module full_hollow()
                 translate([16.5, 0.5, 1])
                 sphere(d = 25);
 
-                // Fill in a bit around the USB port
-                translate([0, 0, bottom])
+                if (usb_plug)
                 {
-                    hull()
+                    // Fill in a bit around the USB port
+                    translate([0, 0, bottom])
                     {
-                        rotate([0, 0, 180 + 45])
-                        translate([0, -42, 0])
+                        hull()
                         {
-                            cuboid([16, 17.75, 8]);
-//                            translate([0, 0, 4])
-//                            rotate([90, 0, 0])
-//                            cylinder(d = 4, h = 15.75, anchor = CENTER);
+                            rotate([0, 0, 180 + 45])
+                            translate([0, -42, 0])
+                            {
+                                cuboid([16, 17.75, 8]);
+    //                            translate([0, 0, 4])
+    //                            rotate([90, 0, 0])
+    //                            cylinder(d = 4, h = 15.75, anchor = CENTER);
+                            }
                         }
                     }
                 }
             }
         }
         
-        // Front outlet that will fit either a fixed cable or a small USB-C breakout board like this one:
-        // https://www.amazon.com/Teansic-Connector-Breakout-Converter-Transfer/dp/B0B4J5NJ2Y
-        // Insert the board into the rectangular cutout PCB-side-up, and the bottom plate will rest against the
-        // USB-C connector and hold it in place.
-        translate([0, 0, bottom])
+        if (usb_plug)
         {
-            rotate([0, 0, 180 + 45])
-            translate([0, -42, 0])
-            usb_port_cut();
+            // Front outlet that will fit either a fixed cable or a small USB-C breakout board like this one:
+            // https://www.amazon.com/Teansic-Connector-Breakout-Converter-Transfer/dp/B0B4J5NJ2Y
+            // Insert the board into the rectangular cutout PCB-side-up, and the bottom plate will rest against the
+            // USB-C connector and hold it in place.
+            translate([0, 0, bottom])
+            {
+                rotate([0, 0, 180 + 45])
+                translate([0, -42, 0])
+                usb_port_cut();
+            }
+        }
+        else
+        {
+            // Cable outlet at the front (this was part of wire_cutouts, which we've disabled here.)
+            translate([0, 0, bottom])
+            {
+                rotate([90, 0, 230])
+                translate([-22, 0, 35])
+                rotate([0, 15, 0])
+                linear_extrude(height = 25)
+                wire_cutout_profile();
+            }
         }
         
         // A little extra clearance for the main board
