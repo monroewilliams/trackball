@@ -39,6 +39,9 @@ module switch_carrier(front_overhang = 0, rear_overhang = 0, body_height = 14, b
     // fitting the switch into. This setting works well for my printer, when using a hole that
     // I've modeled as exactly 14x14mm.
     body_width = 13.8;
+    
+    // Reduce the overall width of the body slightly in one direction, to make for an easier fit.
+    body_clearance = 0.4;
 
     switch_centering = (body_width - switch_length) / 2;
 
@@ -170,8 +173,8 @@ module switch_carrier(front_overhang = 0, rear_overhang = 0, body_height = 14, b
             union()
             {
                 // main body
-                translate(body_offset)
-                cuboid([body_width, body_height, body_width], anchor = [-1, -1, -1],
+                translate(body_offset - [0, 0, 0])
+                cuboid([body_width, body_height, body_width - body_clearance], anchor = [-1, -1, -1],
                     rounding = 2, except = BACK);
             
                 // lip
@@ -255,13 +258,17 @@ module switch_carrier(front_overhang = 0, rear_overhang = 0, body_height = 14, b
                         
                         // Rounded hinge end
                         cyl(r=top_thickness, h=body_width, anchor = CENTER, rounding = 1);
+                        
+                        // Add a bit more around the hinge to help it print in the first layer
+                        translate([hinge_thickness - (top_thickness), 0, 0])
+                        cylinder(r=top_thickness, h=body_width / 2, anchor = TOP);//, $fn=6);
 
                     }
                     
                     union()
                     {
-                        // cut bottom half of hinge end round
-                        cube([top_thickness * 2, top_thickness, body_width], anchor = BACK);
+                        // cut bottom half of hinge end round and hinge reinforcement
+                        cube([top_thickness * 4, top_thickness, body_width], anchor = BACK);
 
                         // hinge cut
                         translate([hinge_thickness - (top_thickness), 0, 0])
@@ -445,7 +452,7 @@ module switch_carrier(front_overhang = 0, rear_overhang = 0, body_height = 14, b
             // Separate the halves -- useful when working on the hinge design
 //            translate([0, -6, 0])
 
-            translate([0, hinge?-0.4:-6, 0])
+            translate([0, hinge?-0.4:-6, -body_clearance])
             rotate([180, 0, 0])
             {
 //                color("green", 0.25)
