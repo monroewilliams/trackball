@@ -13,14 +13,38 @@ include <trackball.scad>
 
 //ball_diameter=57;
 
-//full_hollow();
+//full_hollow(true);
 
-module full_hollow(usb_plug = false)
+module full_hollow(usb_plug = true)
 {
     difference()
     {
         // This replicates most of what's in full()
-        body();
+        union()
+        {
+            body();
+            if (usb_plug)
+            {
+                // Fill in a bit around the USB port
+                translate([0, 0, bottom])
+                {
+                    hull()
+                    {
+                        rotate([0, 0, 180 + 45])
+                        translate([0, -50, 0])
+                        {
+                            cuboid([30, 20, 12], anchor = FRONT+BOTTOM,
+                                rounding = 2, edges = [FRONT+TOP, FRONT+RIGHT, FRONT+RIGHT+TOP]);
+                                
+//                            translate([0, 0, 4])
+//                            rotate([-90, 0, 0])
+//                            cyl(d = 10, h = 10, anchor = BOTTOM,
+//                                rounding = 2);
+                        }
+                    }
+                }
+            }
+        }
         ball_cutout();
         bearing_cutouts();
         sensor_cutouts();
@@ -69,33 +93,23 @@ module full_hollow(usb_plug = false)
                 translate([16.5, 0.5, 1])
                 sphere(d = 25);
 
-                if (usb_plug)
-                {
-                    // Fill in a bit around the USB port
-                    translate([0, 0, bottom])
-                    {
-                        hull()
-                        {
-                            rotate([0, 0, 180 + 45])
-                            translate([0, -42, 0])
-                            {
-                                cuboid([16, 17.75, 8]);
-    //                            translate([0, 0, 4])
-    //                            rotate([90, 0, 0])
-    //                            cylinder(d = 4, h = 15.75, anchor = CENTER);
-                            }
-                        }
-                    }
-                }
             }
         }
         
         if (usb_plug)
         {
             // Front outlet that will fit either a fixed cable or a small USB-C breakout board like this one:
-            // https://www.amazon.com/Teansic-Connector-Breakout-Converter-Transfer/dp/B0B4J5NJ2Y
-            // Insert the board into the rectangular cutout PCB-side-up, and the bottom plate will rest against the
-            // USB-C connector and hold it in place.
+            // https://www.amazon.com/dp/B0CB2VFJ54
+            // This appears to be a clone of this SparkFun one:
+            // https://www.sparkfun.com/sparkfun-usb-c-breakout.html
+            // and similar-looking ones are available from AliExpress:
+            // https://www.aliexpress.us/item/3256808121945210.html
+            // Insert the board into the rectangular cutout with the PCB side towards the top of the trackball, 
+            // and the bottom cover will rest against the USB-C connector and help hold it in place.
+            // The sensor can be secured with M3x6mm screws, either cap or button head should fit.
+            // The wires can be soldered directly to the breakout board, or if you prefer there should be room
+            // to solder a 5 or 6 pin JST-XH connector to it (on the side OPPOSITE the USB-C connector, 
+            // so it's facing upwards in the assembled trackball) and make the cable with crimp connectors.
             translate([0, 0, bottom])
             {
                 rotate([0, 0, 180 + 45])
@@ -130,40 +144,97 @@ module full_hollow(usb_plug = false)
 
 }
 
+//usb_port_cut();
 module usb_port_cut()
 {
-    board_width = 12;
-    board_length = 13.75;
-    board_height = 4.25;
+    board_width = 21.75;
+    board_length = 12.75;
+    board_height = 4.75;
+    hole_size = 3.3;
+    hole_offsets = [
+        [ (13.29 + hole_size) / 2, -(board_length - hole_size) / 2 + 1],
+        [-(13.29 + hole_size) / 2, -(board_length - hole_size) / 2 + 1]
+    ];
     
-    // Cavity just the size of the board
-    hull()
-    {
-        cuboid([board_width, board_length, board_height], anchor = BOTTOM);
-        translate([0, 0, 4])
-        rotate([90, 0, 0])
-        cylinder(d = 3, h = board_length, anchor = CENTER);
-    }
+    // If true, create holes that can be used to anchor the breakout with M3 screws.
+    // If false, try to make pins out of plastic that will hold the board in place.
+    // Screw holes are easier to print, and generally fit better.
+    screw_holes = true;
     
-    hull()
+    difference()
     {
-        // hole out the front just the size of the USB plug,
-        cuboid([9, 2 + board_length/2, 3], anchor = BOTTOM+BACK,
-        rounding = 1.5, edges = [TOP+LEFT, TOP+RIGHT]);
-        // with some extra room, if we're using this for a cable instead
-        translate([0, 0, 4])
-        rotate([90, 0, 0])
-        cylinder(d = 3, h = 2 + board_length/2, anchor = BOTTOM);
-        
-    }
-    
-    // Hole out the back for the soldered wires
-    hull()
-    {
-        cuboid([board_width - 4, 3 + board_length/2, board_height], anchor = BOTTOM+FRONT);
-        translate([0, board_length/2, 4])
-        rotate([-90, 0, 0])
-        cylinder(d = 4, h = 3 , anchor = BOTTOM);
+        union()
+        {
+            // Cavity just the size of the board
+            hull()
+            {
+                // Add just a touch of clearance in case the board is slightly over size
+                cuboid([board_width + 0.25, board_length, board_height], anchor = BOTTOM);
+                if (false)
+                {
+                    // Single peaked roof -- this needs really good overhang printing to succeed
+                    translate([0, 0, 5])
+                    rotate([-90, 0, 0])
+                    cylinder(d = 3, h = board_length / 2, anchor = BOTTOM);
+                }
+                else
+                {
+                    // Higher roof that comes to a point by the connector cutout.
+                    // This should be substantially easier to print.
+                    translate([0, 2, 8.5])
+                    sphere(d = 3);
+                }
+            }
+            
+            hull()
+            {
+                // hole out the front just the size of the USB plug,
+                cuboid([9, 2 + board_length/2, 3], anchor = BOTTOM+BACK,
+                rounding = 1.5, edges = [TOP+LEFT, TOP+RIGHT]);
+                // with some extra room, if we're using this for a cable instead
+                translate([0, 0, 4])
+                rotate([90, 0, 0])
+                cylinder(d = 3, h = 2 + board_length/2, anchor = BOTTOM);
+                
+            }
+            
+            // Room for a JST-XH connector soldered to the board
+            // X dimension could be 17.5 here, but making it board_width fixes a bad overhang.
+            translate([0, (board_length / 2 + 1), board_height])
+            cuboid([board_width, 5.75, 7], anchor = BOTTOM + BACK);
+
+            if (screw_holes)
+            {
+                for (offset = hole_offsets)
+                {
+                    translate(offset)
+                    {
+                        screw_hole_size = 2.75;
+                        // Holes for m3 screws to fit into, to secure the breakout board
+                        cyl(d = screw_hole_size, h = board_height + 6, anchor = BOT,
+                        chamfer2 = screw_hole_size / 2);
+                    }
+                }
+            }
+
+        }
+        union()
+        {
+            if (!screw_holes)
+            {
+                for (offset = hole_offsets)
+                {
+                    translate(offset)
+                    {
+                        // The pins are slightly smaller than the actual hole size, which should make it fit easier.
+                        translate([0, 0, board_height - 1])
+                        cylinder(d = 3, h = 5, anchor = BOT);
+                        // Built-in support for the pin
+                        cylinder(d1 = 5, d2 = 3, h = board_height - 1.1, anchor = BOT);
+                    }
+                }
+            }
+        }
     }
 }
 

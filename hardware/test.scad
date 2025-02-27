@@ -1,20 +1,17 @@
 // Using 'include' instead of 'use' here means we can use global definitions from trackball.scad, not just modules.
-include <trackball.scad>
-
-// Uncomment this for quicker interactive renders.
-$fa = 4;
+include <trackball-hollow.scad>
 
 // Defines here can override global defines in trackball.scad, so you can change parameters like ball diameter
 // and button positions here.
 // ball_diameter=57;
 
-button_params = [
-    // example_button_params[0],
-    // example_button_params[1],
-    // example_button_params[2],
-    // example_button_params[3],
-    // example_button_params[4]
-];
+//button_params = [
+//    // example_button_params[0],
+//    // example_button_params[1],
+//    // example_button_params[2],
+//    // example_button_params[3],
+//    // example_button_params[4]
+//];
 
 
 // This renders the full trackball from trackball.scad.
@@ -66,10 +63,60 @@ module body_standin()
     ccube(80, 180, 50);
 }
 
+// Screw hole size test
+//difference()
+//{
+//    cuboid([10, 10, 5]);
+//    cyl(d = 2.75, h = 10);
+//}
+
+// Just the portion around the USB plug
+if (true)
+{
+    intersection()
+    {
+        full_hollow(true);
+        
+        rotate([0, 0, 45])
+        translate([0, 39, bottom])
+        cuboid([50, 100, 12], anchor = FRONT+BOTTOM);
+    }
+}
+
+// Third button hole + one bearing hole
+if (false)
+{
+    intersection()
+    {
+        full_hollow();
+        difference()
+        {
+            translate([-6, -9, bottom + 12])
+            cuboid([27, 45, 50], anchor = [1, 1, -1]);
+
+            cuboid([30, 16, 30], anchor = [1, 1, -1]);
+        }
+    }
+}
+    
+// Just bearing test
+if (false)
+{
+    intersection()
+    {
+        full();
+        rotate([0, 0, 30])
+        translate([-25, 0, bottom + 18])
+        cuboid([8, 10, 10], anchor = CTR);
+    }
+}       
+
+
+
 // This is the full assembly with all the cutouts. I find it useful when I just want to visualize
 // certain of the cutouts on the full body.
 
-if (true)
+if (false)
 union()
 {
     difference()

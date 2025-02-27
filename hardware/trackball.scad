@@ -348,7 +348,7 @@ module sensor_screw_hole()
     // screwdriver access
     translate([0, 0,-104])
     color("white", 0.5)
-    cylinder(d=5, h=100);
+    cylinder(d=3, h=100);
 }
 
 module pmw3360_board()
