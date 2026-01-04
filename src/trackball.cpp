@@ -48,6 +48,12 @@ const int report_Hz = 120;
 // Turn this on to make the LED light up when buttons are pressed, and fade when they're released.
 // #define BUTTON_LIGHTS
 
+// Turn this on to adjust the sensor transform for a left-handed version.
+// #define LEFT_HANDED
+
+// Turn this on to override the default device name used in the device descriptor
+// #define DEVICE_NAME FooBall
+
 ///////////////////////////////////////
 
 #if SENSOR_DISPLAY == 1
@@ -266,18 +272,23 @@ const int report_microseconds = 1000000 / report_Hz;
 // This transform takes that into account.
 float st[3][4] = 
 {
-#if 1
+#if !defined(LEFT_HANDED)
   // This is the "hack" transform I've been using for the new sensor location 
   // (s1 at 180, s2 at  270 + 45, both at 30 degrees elevation)
   { -1,        0,       -sqrtf(2.0),  0   },  // X is s2.x, scaled up a bit, with s1.x subtracted to compensate for s2 being off-axis
   {  1,        0,        0,           0   },  // Y is s1.x
   {  0,       -0.5,      0,          -0.5 }   // Z is the average of the two sensors' y components.
 #else
-  // This was the transform for the original sensor location (s1 at 180 and s2 at 270, at zero elevation)
-  {  0,        0,       -1,     0   },    // X is the inverse of the direct x reading of s2
-  {  1,        0,        0,     0   },    // Y is the direct x reading of s1
-  {  0,       -0.5,      0,    -0.5  }    // Z is the average of the two sensors' y components.
+  // This is the transform for the left-handed version, where the main body has been mirrored.
+  {  1,        0,        sqrtf(2.0),  0   },  // X is s2.x, scaled up a bit, with s1.x subtracted to compensate for s2 being off-axis
+  {  1,        0,        0,           0   },  // Y is s1.x
+  {  0,       -0.5,      0,          -0.5 }   // Z is the average of the two sensors' y components.
 #endif
+
+  // This was the transform for the original sensor location (s1 at 180 and s2 at 270, at zero elevation)
+  // {  0,        0,       -1,     0   },    // X is the inverse of the direct x reading of s2
+  // {  1,        0,        0,     0   },    // Y is the direct x reading of s1
+  // {  0,       -0.5,      0,    -0.5  }    // Z is the average of the two sensors' y components.
 };
 
 // sensor hardware abstraction
@@ -656,9 +667,24 @@ void setup()
   // Free up hardware serial pins for our use.
   Serial1.end();
 
+  // Set up a human-readable name for the device descriptor
+  const char* deviceName = 
+  #if defined(DEVICE_NAME)
+    // Allow the platformio.ini file to override the default device name
+    // Gymnastics to convert macro text to a string literal
+    #define STRINGIFY(X) #X
+    STRINGIFY(DEVICE_NAME)
+    #undef STRINGIFY
+  #elif defined(LEFT_HANDED)
+    "MWTrackball-LH"
+  #else
+    "MWTrackball"
+  #endif
+  ;
+
   // TinyUSB Setup
-  USBDevice.setProductDescriptor("MWTrackball");
-  usb_hid.setStringDescriptor("MWTrackball");
+  USBDevice.setProductDescriptor(deviceName);
+  usb_hid.setStringDescriptor(deviceName);
   usb_hid.setPollInterval(2);
   usb_hid.setReportDescriptor(desc_hid_report, sizeof(desc_hid_report));
 
