@@ -10,6 +10,8 @@ As an alternative to off-the-shelf microcontrollers and sensor boards, I've crea
 [Details on the custom boards are here.](hardware/Custom.md)
 
 ### Update January 2026 ###
+I've refined the model for the main body of the trackball to be less of a brick and more of a hollow shell, which leaves much more room inside for wire routing, etc. The cable outlet at the front of the shell now also provides an option for a hard-mounted [usb-c plug](https://www.sparkfun.com/sparkfun-usb-c-breakout.html), or [similar](https://www.amazon.com/dp/B0CB2VFJ54) [clones](https://www.aliexpress.us/item/3256808121945210.html) 
+
 I added an [updated version of the button carrier](hardware/Button-carrier-v2.md). Its design is a bit more refined overall, but the main feature is that it allows you to avoid soldering wires to the microswitch by accepting a 3-pin JST XH female connector.
 
 I also added an option to modify the sensor transform for a left-handed build. To make use of this, print mirrored versions of the main body and bottom plate (most slicers have an option to do this at slicing time), and define LEFT_HANDED when compiling trackball.cpp to modify the sensor transform. The `env:rp2040_mwtrackball_left_handed` section in [platformio.ini](platformio.ini) demonstrates this.
