@@ -2,6 +2,7 @@
 #include <math.h>
 
 #include "Adafruit_TinyUSB.h"
+#include <Adafruit_SleepyDog.h>
 #include "trackball.h"
 #include "Vector.h"
 #include "adns.h"
@@ -822,6 +823,8 @@ void setup()
 #if defined(SENSOR_DISPLAY) && defined(SENSOR_DISPLAY_ON_STARTUP)
   set_sensor_display(true);
 #endif
+
+  Watchdog.enable(2000);
 }
 
 void click()
@@ -1178,6 +1181,8 @@ void loop()
   {
     delayMicroseconds(report_microseconds - loop_time);
   }
+ 
+    Watchdog.reset();
 }
 
 
